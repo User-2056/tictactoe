@@ -23,6 +23,26 @@ The Roblox game is built using Claude Code connected to Roblox Studio via MCP (M
 - Start a fresh conversation in Cursor after opening Studio — the MCP tools load at conversation startup
 - Check the Plugins tab in Studio if tools aren't responding
 
+## Rojo Setup
+
+Rojo syncs `.luau` script files from this repo into Roblox Studio, so scripts are version-controlled on GitHub.
+
+**Installed:** Rojo v7.6.1 at `C:\Users\Taylor\.local\bin\rojo.exe`
+
+**Project location:** `roblox-game/` folder
+
+**Folder structure:**
+- `roblox-game/src/server/` → ServerScriptService (server scripts)
+- `roblox-game/src/client/` → StarterPlayerScripts (client scripts)
+- `roblox-game/src/shared/` → ReplicatedStorage (shared modules)
+
+**To start syncing:**
+1. Open a terminal in `roblox-game/` and run: `rojo serve`
+2. In Roblox Studio, click the Rojo plugin → Connect
+3. Scripts in `src/` will now live-sync into Studio
+
+**Studio plugin:** Must be installed once from the Roblox Creator Marketplace (search "Rojo" by rojo-rbx)
+
 ## Running the App
 
 Open `tictactoe/index.html` directly in a browser — no build step, server, or dependencies required.
