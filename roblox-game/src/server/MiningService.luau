@@ -143,6 +143,7 @@ function MiningService.init(config: ServiceConfig)
     oreAwardedCb = config.onOreAwarded
 
     local function registerPart(part: BasePart)
+        if nodeStates[part] then return end  -- already registered (dedup guard)
         local oreType = part:GetAttribute(GameConstants.ORE_NODE_ATTRIBUTE) :: string?
         if not oreType or not OreConfig.Ores[oreType] then return end
 
