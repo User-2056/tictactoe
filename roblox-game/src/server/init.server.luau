@@ -1,39 +1,45 @@
-local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
--- Build the door model
-local model = Instance.new("Model")
-model.Name = "SpinningDoor"
-model.Parent = workspace
+local OPEN_TIME  = 2    -- seconds to swing open
+local CLOSE_TIME = 0.3  -- seconds to snap shut
+local PAUSE_OPEN = 0.8  -- pause at fully open
+local PAUSE_SHUT = 1.5  -- pause at fully closed
+local OPEN_ANGLE = 90   -- degrees
 
-local function makePart(name, size, position, color, material)
-	local part = Instance.new("Part")
-	part.Name = name
-	part.Size = size
-	part.CFrame = CFrame.new(position)
-	part.Anchored = true
-	part.BrickColor = BrickColor.new(color)
-	part.Material = material or Enum.Material.Wood
-	part.Parent = model
-	return part
+-- Wait for door parts to exist in the workspace
+local doorModel = workspace:WaitForChild("Door")
+local doorPanel = doorModel:WaitForChild("DoorPanel")
+
+-- Store closed position; hinge is along the left edge of the panel
+local closedCFrame = doorPanel.CFrame
+local halfWidth    = doorPanel.Size.X / 2
+local hingeCFrame  = closedCFrame * CFrame.new(-halfWidth, 0, 0)
+local openCFrame   = hingeCFrame * CFrame.Angles(0, math.rad(-OPEN_ANGLE), 0) * CFrame.new(halfWidth, 0, 0)
+
+local function animateDoor()
+	-- Slowly swing open
+	local openTween = TweenService:Create(
+		doorPanel,
+		TweenInfo.new(OPEN_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+		{ CFrame = openCFrame }
+	)
+	openTween:Play()
+	openTween.Completed:Wait()
+
+	task.wait(PAUSE_OPEN)
+
+	-- Snap shut fast
+	local closeTween = TweenService:Create(
+		doorPanel,
+		TweenInfo.new(CLOSE_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+		{ CFrame = closedCFrame }
+	)
+	closeTween:Play()
+	closeTween.Completed:Wait()
+
+	task.wait(PAUSE_SHUT)
 end
 
--- Frame (reddish brown wood)
-makePart("FrameLeft",  Vector3.new(0.5, 7.5, 0.5), Vector3.new(0,   3.75, 0), "Reddish brown")
-makePart("FrameRight", Vector3.new(0.5, 7.5, 0.5), Vector3.new(4.5, 3.75, 0), "Reddish brown")
-makePart("FrameTop",   Vector3.new(5.5, 0.5, 0.5), Vector3.new(2.25, 7.75, 0), "Reddish brown")
-
--- Door panel (medium brown, hinges on left side)
-local door = makePart("DoorPanel", Vector3.new(4, 7, 0.2), Vector3.new(2.25, 3.75, 0), "Medium brown")
-
--- Hinge is at the left edge of the door (right edge of left frame post)
-local hingePos = Vector3.new(0.25, 3.75, 0)
-local doorHalfWidth = 2  -- half of 4-stud door width
-
-local angle = 0
-
-RunService.Heartbeat:Connect(function(dt)
-	angle = angle + math.rad(60) * dt  -- 60 degrees per second
-	door.CFrame = CFrame.new(hingePos)
-		* CFrame.Angles(0, angle, 0)
-		* CFrame.new(doorHalfWidth, 0, 0)
-end)
+while true do
+	animateDoor()
+end
