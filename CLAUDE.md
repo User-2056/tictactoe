@@ -2,6 +2,27 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Projects in this Repo
+
+This repo contains two separate projects:
+
+1. **Tic Tac Toe** (`tictactoe/`) — a browser-based single-page app (no build step)
+2. **Roblox Game** — built directly in Roblox Studio via the Studio MCP integration
+
+## Roblox Studio Setup
+
+The Roblox game is built using Claude Code connected to Roblox Studio via MCP (Model Context Protocol).
+
+**How the connection works:**
+- An MCP server (`StudioMCP.exe`) runs locally and connects to an open Roblox Studio session
+- This allows Claude to create parts, models, scripts, and other objects directly inside Studio
+- Config: `cmd.exe /c C:\Users\Taylor\AppData\Local\Roblox\mcp.bat` (local project scope)
+
+**Requirements to use Studio MCP:**
+- Roblox Studio must be open with a place loaded before starting a Claude Code conversation
+- Start a fresh conversation in Cursor after opening Studio — the MCP tools load at conversation startup
+- Check the Plugins tab in Studio if tools aren't responding
+
 ## Running the App
 
 Open `tictactoe/index.html` directly in a browser — no build step, server, or dependencies required.
