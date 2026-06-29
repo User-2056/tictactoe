@@ -33,6 +33,12 @@ local swingTimes:    { [number]: { [BasePart]: number } } = {}
 local oreAwardedCb:  (Player, string, number) -> ()
 local DataService:   any
 
+-- Visual constants
+local STONE_COLOR    = Color3.fromRGB(130, 130, 130)
+local STONE_MATERIAL = Enum.Material.Slate
+local CHUNK_TAG      = "OreChunk"
+local CHUNK_COUNT    = 9
+
 -- Helpers ------------------------------------------------------------------
 local function getRemote(name: string): RemoteEvent
     return Shared:WaitForChild(GameConstants.REMOTE_FOLDER_NAME):WaitForChild(name) :: RemoteEvent
@@ -44,10 +50,89 @@ local function inventoryTotal(inv: { [string]: number }): number
     return n
 end
 
+local function clearChunks(part: BasePart)
+    for _, child in ipairs(part:GetChildren()) do
+        if child:IsA("BasePart") and child:GetAttribute(CHUNK_TAG) then
+            child:Destroy()
+        end
+    end
+end
+
+local function buildChunks(basePart: BasePart, chunkColor: Color3)
+    local s  = basePart.Size
+    local hx = s.X * 0.5
+    local hy = s.Y * 0.5
+    local hz = s.Z * 0.5
+
+    local faces = {
+        { n=Vector3.new(0, 1,0), a1=Vector3.new(1,0,0), a2=Vector3.new(0,0,1), fd=hy, s1=hx, s2=hz },
+        { n=Vector3.new(0,-1,0), a1=Vector3.new(1,0,0), a2=Vector3.new(0,0,1), fd=hy, s1=hx, s2=hz },
+        { n=Vector3.new( 1,0,0), a1=Vector3.new(0,1,0), a2=Vector3.new(0,0,1), fd=hx, s1=hy, s2=hz },
+        { n=Vector3.new(-1,0,0), a1=Vector3.new(0,1,0), a2=Vector3.new(0,0,1), fd=hx, s1=hy, s2=hz },
+        { n=Vector3.new(0,0, 1), a1=Vector3.new(1,0,0), a2=Vector3.new(0,1,0), fd=hz, s1=hx, s2=hy },
+        { n=Vector3.new(0,0,-1), a1=Vector3.new(1,0,0), a2=Vector3.new(0,1,0), fd=hz, s1=hx, s2=hy },
+    }
+
+    for i = 1, CHUNK_COUNT do
+        local face = faces[((i - 1) % #faces) + 1]
+
+        local u          = (math.random() * 2 - 1) * face.s1 * 0.55
+        local v          = (math.random() * 2 - 1) * face.s2 * 0.55
+        local protrusion = face.fd + 0.12 + math.random() * 0.18
+
+        local chunkSize = Vector3.new(
+            0.55 + math.random() * 0.45,
+            0.45 + math.random() * 0.40,
+            0.55 + math.random() * 0.45
+        )
+
+        local localPos = face.n * protrusion + face.a1 * u + face.a2 * v
+
+        local chunk = Instance.new("Part")
+        chunk.Name        = "OreChunk"
+        chunk.Size        = chunkSize
+        chunk.Color       = chunkColor
+        chunk.Material    = Enum.Material.SmoothPlastic
+        chunk.Anchored    = false
+        chunk.CanCollide  = false
+        chunk.CastShadow  = false
+        chunk:SetAttribute(CHUNK_TAG, true)
+        chunk.CFrame = basePart.CFrame
+            * CFrame.new(localPos)
+            * CFrame.Angles(
+                (math.random() - 0.5) * 0.55,
+                (math.random() - 0.5) * 0.55,
+                (math.random() - 0.5) * 0.55
+            )
+        chunk.Parent = basePart
+
+        local weld  = Instance.new("WeldConstraint")
+        weld.Part0  = chunk
+        weld.Part1  = basePart
+        weld.Parent = chunk
+    end
+end
+
 local function applyAppearance(part: BasePart, oreType: string)
+    part.Color    = STONE_COLOR
+    part.Material = STONE_MATERIAL
+
+    clearChunks(part)
     local data: any = OreConfig.Ores[oreType]
-    part.BrickColor = data.brickColor
-    part.Material   = data.material
+    if data.chunkColor then
+        buildChunks(part, data.chunkColor :: Color3)
+    end
+end
+
+local function setNodeVisible(part: BasePart, visible: boolean)
+    local t = if visible then 0 else 1
+    part.Transparency = t
+    part.CanCollide   = visible
+    for _, child in ipairs(part:GetChildren()) do
+        if child:IsA("BasePart") and child:GetAttribute(CHUNK_TAG) then
+            (child :: BasePart).Transparency = t
+        end
+    end
 end
 
 local function attachPrompt(part: BasePart, state: NodeState)
@@ -77,8 +162,7 @@ local function respawnNode(part: BasePart)
     state.isDestroyed = false
 
     applyAppearance(part, newType)
-    part.Transparency       = 0
-    part.CanCollide         = true
+    setNodeVisible(part, true)
     state.prompt.ObjectText = oreData.displayName
     state.prompt.Enabled    = true
 
@@ -120,8 +204,7 @@ function MiningService.handleSwing(player: Player, part: BasePart)
 
     if state.health <= 0 then
         state.isDestroyed    = true
-        part.Transparency    = 1
-        part.CanCollide      = false
+        setNodeVisible(part, false)
         state.prompt.Enabled = false
 
         local oreType = state.oreType

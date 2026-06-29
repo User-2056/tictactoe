@@ -1,6 +1,7 @@
 --!strict
 -- OreConfig.luau
 -- All ore type definitions. Region field enables multi-region expansion later.
+-- Visual: base is always gray Slate. chunkColor drives embedded ore chunks.
 
 local OreConfig = {}
 
@@ -11,8 +12,7 @@ OreConfig.Ores = {
         spawnWeight = 45,
         nodeHealth  = 3,
         region      = "StarterMine",
-        brickColor  = BrickColor.new("Medium stone grey"),
-        material    = Enum.Material.SmoothPlastic,
+        chunkColor  = nil,                              -- plain stone, no chunks
     },
     coal = {
         displayName = "Coal",
@@ -20,8 +20,7 @@ OreConfig.Ores = {
         spawnWeight = 35,
         nodeHealth  = 5,
         region      = "StarterMine",
-        brickColor  = BrickColor.new("Really black"),
-        material    = Enum.Material.SmoothPlastic,
+        chunkColor  = Color3.fromRGB(20, 20, 20),
     },
     iron = {
         displayName = "Iron",
@@ -29,8 +28,7 @@ OreConfig.Ores = {
         spawnWeight = 17,
         nodeHealth  = 8,
         region      = "StarterMine",
-        brickColor  = BrickColor.new("Light grey"),
-        material    = Enum.Material.SmoothPlastic,
+        chunkColor  = Color3.fromRGB(216, 175, 147),   -- pale rust-beige
     },
     gold = {
         displayName = "Gold",
@@ -38,8 +36,7 @@ OreConfig.Ores = {
         spawnWeight = 3,
         nodeHealth  = 12,
         region      = "StarterMine",
-        brickColor  = BrickColor.new("Bright yellow"),
-        material    = Enum.Material.SmoothPlastic,
+        chunkColor  = Color3.fromRGB(252, 222, 107),
     },
 }
 
