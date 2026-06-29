@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- ContractUI.luau
 -- Toggle with C key. Shows 3 active contracts with progress bars.
 -- Refresh button sends Contract_Refresh remote (server enforces cooldown).

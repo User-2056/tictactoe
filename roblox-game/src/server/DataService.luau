@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- DataService.luau
 -- All DataStore access and in-memory player data cache.
 -- Every other service reads/writes player data exclusively through this module.

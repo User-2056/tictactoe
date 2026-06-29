@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- PickaxeConfig.luau
 -- swingCooldown = BASE_SWING_COOLDOWN / speed
 -- Upgrades must be purchased sequentially (tier + 1 only).

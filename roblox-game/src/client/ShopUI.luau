@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- ShopUI.luau
 -- Opens when shop ProximityPrompt fires (client-side detection only).
 -- Purchase requests sent to server via RemoteEvents for validation.

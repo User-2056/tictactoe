@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- MiningService.luau
 -- Scans Workspace for Parts with OreType attribute (set in Studio).
 -- Attaches ProximityPrompts, tracks health, awards ore on depletion,
@@ -56,7 +56,6 @@ local function attachPrompt(part: BasePart, state: NodeState)
     p.ObjectText            = (OreConfig.Ores[state.oreType] :: any).displayName
     p.MaxActivationDistance = 8
     p.HoldDuration          = 0
-    p.Cooldown              = 0
     p.Parent                = part
     state.prompt            = p
 

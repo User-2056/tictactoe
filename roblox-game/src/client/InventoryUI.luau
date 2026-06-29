@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- InventoryUI.luau
 -- Toggle with I key. Shows ore quantities and current market value.
 

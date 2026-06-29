@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- GameConstants.luau
 -- Single source of truth for all tunable numbers.
 -- Nothing in any logic script should contain a magic number.
@@ -24,5 +24,5 @@ return {
     SHOP_ATTRIBUTE            = "IsPickaxeShop",
 
     -- Remote events folder (server creates instances on startup)
-    REMOTE_FOLDER_NAME        = "RemoteEvents",
+    REMOTE_FOLDER_NAME        = "GameEvents",
 }

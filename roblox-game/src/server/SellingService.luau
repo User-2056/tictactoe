@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- SellingService.luau
 -- Finds sell zone Parts in Workspace (attribute IsSellZone = true).
 -- Attaches a ProximityPrompt and converts inventory to money at market prices.

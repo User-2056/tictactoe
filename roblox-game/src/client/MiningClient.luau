@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- MiningClient.luau
 -- Purely reactive: listens to server mining events and plays visual feedback.
 -- Floating text on hit, colour changes on destroy. No remotes fired here.

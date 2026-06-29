@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- MarketService.luau
 -- Deterministic daily prices seeded by UTC day number.
 -- Recalculates automatically at midnight. Broadcasts to all clients on change.

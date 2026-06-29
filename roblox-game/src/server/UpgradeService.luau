@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- UpgradeService.luau
 -- Validates and applies pickaxe and inventory capacity upgrades.
 -- All validation is server-side; clients only fire a request remote.

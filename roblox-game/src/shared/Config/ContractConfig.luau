@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- ContractConfig.luau
 -- Contract payout = basePrice * targetAmount * rewardMult
 -- minAmount/maxAmount rolled randomly at generation time.

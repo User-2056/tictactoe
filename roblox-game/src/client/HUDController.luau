@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- HUDController.luau
 -- Persistent corner overlay: money, pickaxe tier, bag used/max.
 -- Reacts to Data_Update. Replace the Frame with a Studio ScreenGui later.

@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- RemoteProxy.luau
 -- Single access point for all RemoteEvents on the client.
 -- Caches WaitForChild results so no module blocks independently.

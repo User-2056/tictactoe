@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- init.client.luau
 -- Client bootstrap. Waits for the server RemoteEvents folder,
 -- then initialises all client modules in dependency order.

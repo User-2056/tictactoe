@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- RemoteEvents.luau
 -- String name constants for every RemoteEvent.
 -- Server creates the actual RemoteEvent instances in ReplicatedStorage.Shared.

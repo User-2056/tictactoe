@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- ContractService.luau
 -- Generates "mine X of Y ore" contracts on player join.
 -- Tracks progress via onOreAwarded callback from MiningService.

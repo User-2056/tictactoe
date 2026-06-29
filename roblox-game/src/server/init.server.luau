@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- init.server.luau
 -- Server bootstrap. Runs once on server start.
 -- 1. Creates all RemoteEvent instances in ReplicatedStorage.Shared.

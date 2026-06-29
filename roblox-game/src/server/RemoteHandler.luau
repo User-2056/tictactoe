@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- RemoteHandler.luau
 -- Binds all client -> server RemoteEvents to the appropriate service functions.
 -- Mining and Selling fire via ProximityPrompt.Triggered and are NOT wired here.

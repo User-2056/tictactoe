@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- MarketUI.luau
 -- Compact corner panel showing today's ore prices.
 -- Updates when Market_PricesUpdated fires.

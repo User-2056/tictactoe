@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- UpgradeConfig.luau
 -- capacity = max total ore items (sum of all quantities).
 -- Tier 1 is the default; players start here at no cost.

@@ -1,4 +1,4 @@
-﻿--!strict
+--!strict
 -- OreConfig.luau
 -- All ore type definitions. Region field enables multi-region expansion later.
 
