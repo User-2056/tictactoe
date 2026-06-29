@@ -1,60 +1,227 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
+Auto-updated at end of every session. Last updated: 2026-06-29.
+
+---
 
 ## Projects in this Repo
 
-This repo contains two separate projects:
+| Project | Folder | Stack |
+|---|---|---|
+| Tic Tac Toe | `tictactoe/` | Browser SPA, no build step |
+| Mining Corporation (Roblox) | `roblox-game/` | Luau + Rojo + Studio MCP |
 
-1. **Tic Tac Toe** (`tictactoe/`) — a browser-based single-page app (no build step)
-2. **Roblox Game** — built directly in Roblox Studio via the Studio MCP integration
+---
 
-## Roblox Studio Setup
+## Roblox Game: Mining Corporation
 
-The Roblox game is built using Claude Code connected to Roblox Studio via MCP (Model Context Protocol).
+### Concept
+A Roblox idle/active mining game. Players mine ore nodes, sell ore for coins,
+upgrade pickaxes and bag capacity, and complete mining contracts.
 
-**How the connection works:**
-- An MCP server (`StudioMCP.exe`) runs locally and connects to an open Roblox Studio session
-- This allows Claude to create parts, models, scripts, and other objects directly inside Studio
-- Config: `cmd.exe /c C:\Users\Taylor\AppData\Local\Roblox\mcp.bat` (local project scope)
+### MVP Scope (Stage 1 -- IN PROGRESS)
+- One mine (StarterMine region)
+- 4 ore types: Stone, Coal, Iron, Gold
+- 4 pickaxe tiers: Starter, Iron, Steel, Gold
+- 5 bag capacity tiers
+- 3 active contracts at a time (mine X of Y ore)
+- Daily market price variation (seeded, deterministic)
+- DataStore save/load with autosave every 60s
 
-**Requirements to use Studio MCP:**
-- Roblox Studio must be open with a place loaded before starting a Claude Code conversation
-- Start a fresh conversation in Cursor after opening Studio — the MCP tools load at conversation startup
-- Check the Plugins tab in Studio if tools aren't responding
+### NOT in Stage 1
+- Multiple regions, automation, HQ, marketplace, crafting
+
+---
 
 ## Rojo Setup
 
-Rojo syncs `.luau` script files from this repo into Roblox Studio, so scripts are version-controlled on GitHub.
-
 **Installed:** Rojo v7.6.1 at `C:\Users\Taylor\.local\bin\rojo.exe`
+**Project:** `roblox-game/`
 
-**Project location:** `roblox-game/` folder
-
-**Folder structure:**
-- `roblox-game/src/server/` → ServerScriptService (server scripts)
-- `roblox-game/src/client/` → StarterPlayerScripts (client scripts)
-- `roblox-game/src/shared/` → ReplicatedStorage (shared modules)
+**Folder mapping:**
+| Disk path | In-game location |
+|---|---|
+| `src/server/` | `ServerScriptService.Server` (Script) |
+| `src/client/` | `StarterPlayer.StarterPlayerScripts.Client` (LocalScript) |
+| `src/shared/` | `ReplicatedStorage.Shared` (Folder) |
 
 **To start syncing:**
-1. Open a terminal in `roblox-game/` and run: `rojo serve`
-2. In Roblox Studio, click the Rojo plugin → Connect
-3. Scripts in `src/` will now live-sync into Studio
+1. Open terminal in `roblox-game/` and run: `rojo serve`
+2. In Studio: Rojo plugin -> Connect
+3. Scripts in `src/` live-sync into Studio automatically
 
-**Studio plugin:** Must be installed once from the Roblox Creator Marketplace (search "Rojo" by rojo-rbx)
+---
 
-## Running the App
+## Studio MCP
 
-Open `tictactoe/index.html` directly in a browser — no build step, server, or dependencies required.
+An MCP server bridges Claude Code to Roblox Studio for placing world objects.
+
+**Config:** `cmd.exe /c C:\Users\Taylor\AppData\Local\Roblox\mcp.bat` (project scope)
+
+**Requirements:**
+- Studio must be open with a place loaded before starting a Claude session
+- Check the Plugins tab if MCP tools are unresponsive
+
+---
 
 ## Architecture
 
-The entire app lives in `tictactoe/index.html` as a single self-contained file: HTML structure, CSS styles, and JavaScript logic are all inline.
+### Security model
+FilteringEnabled is ON. All economy and inventory mutations are server-authoritative.
+Clients fire RemoteEvents to request; server validates and responds.
 
-**Game state** is held in four module-level variables: `board` (9-element array), `current` (active player, `'X'` or `'O'`), `gameOver` (boolean), `mode` (`'pvp'` or `'cpu'`), and `score` (persists across resets via the `score = score || ...` guard in `init()`).
+### RemoteEvent flow
+Mining and Selling use `ProximityPrompt.Triggered` (fires on server automatically).
+All other client requests go through RemoteEvents in `ReplicatedStorage.Shared.RemoteEvents`.
 
-**CPU AI** (`bestMove`) is a priority-ordered heuristic, not minimax: win if possible → block opponent win → take center → take a random corner → take any open cell. It plays as `'O'` and fires after a 350 ms delay via `setTimeout`.
+### Dependency graph (server)
+```
+GameConstants
+    <- DataService           (DataStore, cache, autosave)
+    <- MarketService         (seeded daily prices)
+    <- MiningService         (node scanning, ProximityPrompt, respawn)
+         |-- onOreAwarded -->
+    <- ContractService       (generate, track, reward)
+    <- SellingService        (sell zone ProximityPrompt)
+    <- UpgradeService        (pickaxe + bag upgrades)
+    <- RemoteHandler         (binds client->server remotes)
+```
 
-**Win detection** checks all 8 winning lines defined in `WINS` against the current `board` array. The same `winner()` helper is reused both for `checkResult()` (end-of-turn check) and inside `bestMove()` (look-ahead simulation with temporary board mutations that are immediately reverted).
+### Data structure saved per player
+```lua
+{
+    money                = 0,
+    inventory            = { stone=0, coal=0, iron=0, gold=0 },
+    pickaxeTier          = "Starter",
+    capacityTier         = 1,         -- 1-5, see UpgradeConfig
+    contracts            = { ... },   -- array of 3 contract tables
+    contractsLastRefresh = 0,         -- os.time() of last refresh
+    version              = 1,
+}
+```
 
-**DOM rendering** is a full re-render on every move: `render()` rewrites all 9 cell `textContent` and `className` values from scratch each call.
+---
+
+## File Index
+
+### Shared (`src/shared/`)
+| File | Purpose |
+|---|---|
+| `GameConstants.luau` | All tunable numbers in one place |
+| `RemoteEvents.luau` | String constants for every event name |
+| `Config/OreConfig.luau` | Ore data + weighted random roll |
+| `Config/PickaxeConfig.luau` | Pickaxe tier stats and costs |
+| `Config/MarketConfig.luau` | Price multiplier bounds |
+| `Config/UpgradeConfig.luau` | Bag capacity tier data |
+| `Config/ContractConfig.luau` | Contract generation templates |
+
+### Server (`src/server/`)
+| File | Purpose |
+|---|---|
+| `init.server.luau` | Bootstrap: create remotes, init all services |
+| `DataService.luau` | DataStore cache, autosave, schema migration |
+| `MarketService.luau` | Seeded daily ore price calculation |
+| `MiningService.luau` | Node scanning, ProximityPrompt, health, respawn |
+| `SellingService.luau` | Sell zone prompt, inventory -> money |
+| `UpgradeService.luau` | Pickaxe and bag upgrade validation |
+| `ContractService.luau` | Contract gen, progress tracking, rewards |
+| `RemoteHandler.luau` | Binds client->server remotes to service fns |
+
+### Client (`src/client/`)
+| File | Purpose |
+|---|---|
+| `init.client.luau` | Bootstrap: wait for remotes, init all modules |
+| `RemoteProxy.luau` | Cached remote access (fire / connect helpers) |
+| `HUDController.luau` | Money / pickaxe / bag overlay (top-left) |
+| `MiningClient.luau` | Hit VFX, floating damage text |
+| `InventoryUI.luau` | Ore list + market value, toggle I |
+| `MarketUI.luau` | Today's prices panel (top-right) |
+| `ShopUI.luau` | Pickaxe + bag upgrade shop |
+| `ContractUI.luau` | Contract progress panel, toggle C |
+
+---
+
+## Studio World Setup (required before mining works)
+
+MiningService scans Workspace for Parts with the `OreType` attribute.
+SellingService scans for Parts with `IsSellZone = true`.
+ShopUI scans for Parts with `IsPickaxeShop = true`.
+
+**Ore nodes (place in a Model named StarterMine):**
+- Part, Size ~(3,3,3), Anchored
+- Attribute `OreType` (string): "stone" | "coal" | "iron" | "gold"
+- Attribute `Region` (string): "StarterMine"
+- Suggest 15 nodes: 7 stone, 5 coal, 2 iron, 1 gold
+
+**Sell Zone:**
+- Part, large flat, Anchored
+- Attribute `IsSellZone` (bool): true
+- SellingService attaches the ProximityPrompt automatically
+
+**Pickaxe Shop:**
+- Part, Anchored
+- Attribute `IsPickaxeShop` (bool): true
+- Add a child ProximityPrompt manually (ActionText = "Open Shop")
+- ShopUI opens the GUI when the prompt fires client-side
+
+---
+
+## Key Bindings (in game)
+- `I` -- toggle Inventory panel
+- `C` -- toggle Contracts panel
+- `E` -- activate nearby ProximityPrompt (mine / sell / open shop)
+
+---
+
+## RemoteEvents Reference
+
+| Name | Direction | Payload |
+|---|---|---|
+| `Data_Update` | S->C | full player data table |
+| `Mining_NodeDamaged` | S->All | {nodeId, healthRemaining, maxHealth} |
+| `Mining_NodeRespawned` | S->All | {nodeId, oreType} |
+| `Market_PricesUpdated` | S->All | {[oreType]: price} |
+| `Sell_Result` | S->C | {success, moneyEarned, message} |
+| `Upgrade_Result` | S->C | {success, type, newTier, message} |
+| `Contract_Updated` | S->C | contracts array |
+| `Upgrade_Pickaxe` | C->S | tier string |
+| `Upgrade_Capacity` | C->S | (none) |
+| `Contract_Refresh` | C->S | (none) |
+
+---
+
+## How to Test (Stage 1 checklist)
+
+1. `rojo serve` in `roblox-game/`, connect in Studio
+2. Press Play -> Output should show each service init line
+3. HUD overlay appears top-left (coins: 0, Pickaxe: Starter, Bag: 0/50)
+4. Market prices panel appears top-right
+5. Place ore nodes in Workspace with OreType attribute -> ProximityPrompts appear
+6. Mine node -> floating text, inventory updates, contracts track
+7. Walk to Sell Zone -> sell all -> coins increase, inventory clears
+8. Press I -> inventory panel shows ore quantities and coin values
+9. Press C -> contract panel shows 3 contracts with progress bars
+10. Go to shop -> buy pickaxe -> tier updates in HUD, mining is faster
+11. Leave and rejoin -> coins and inventory persist (DataStore)
+
+---
+
+## Future Expansion Notes
+
+- **Multiple regions**: Add region key to OreConfig, new Model in Workspace with Region attribute
+- **Automation**: New AutomationService + AutoMiner instances; uses existing MiningService.handleSwing
+- **HQ**: Separate place or top-level region; add HQService
+- **Marketplace**: PlayerToPlayer trades via RemoteFunction + DataService transaction helpers
+- **Crafting**: CraftingConfig + CraftingService; reads inventory via DataService.getPlayerData
+
+---
+
+## Tic Tac Toe
+
+Open `tictactoe/index.html` in a browser. No build step required.
+
+**Architecture:** Single self-contained file. State in four module-level vars:
+`board` (9-element array), `current` (X/O), `gameOver` (bool), `mode` (pvp/cpu).
+
+**CPU AI:** Priority heuristic -- win > block > center > corner > random.
