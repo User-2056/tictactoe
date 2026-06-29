@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Roblox_Studio__character_navigation",
+      "mcp__Roblox_Studio__search_game_tree",
+      "mcp__Roblox_Studio__inspect_instance",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-Content *)"
+    ]
+  }
+}
