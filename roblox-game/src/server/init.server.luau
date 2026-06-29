@@ -1,45 +1,74 @@
-local TweenService = game:GetService("TweenService")
+﻿--!strict
+-- init.server.luau
+-- Server bootstrap. Runs once on server start.
+-- 1. Creates all RemoteEvent instances in ReplicatedStorage.Shared.
+-- 2. Initialises services in dependency order.
+-- 3. Wires the MiningService -> ContractService ore callback.
+-- 4. Handles player lifecycle (load on join, save on leave).
 
-local OPEN_TIME  = 2    -- seconds to swing open
-local CLOSE_TIME = 0.3  -- seconds to snap shut
-local PAUSE_OPEN = 0.8  -- pause at fully open
-local PAUSE_SHUT = 1.5  -- pause at fully closed
-local OPEN_ANGLE = 90   -- degrees
+local Players            = game:GetService("Players")
+local ReplicatedStorage  = game:GetService("ReplicatedStorage")
 
--- Wait for door parts to exist in the workspace
-local doorModel = workspace:WaitForChild("Door")
-local doorPanel = doorModel:WaitForChild("DoorPanel")
+local Shared        = ReplicatedStorage:WaitForChild("Shared")
+local GameConstants = require(Shared.GameConstants)
+local RE            = require(Shared.RemoteEvents)
 
--- Store closed position; hinge is along the left edge of the panel
-local closedCFrame = doorPanel.CFrame
-local halfWidth    = doorPanel.Size.X / 2
-local hingeCFrame  = closedCFrame * CFrame.new(-halfWidth, 0, 0)
-local openCFrame   = hingeCFrame * CFrame.Angles(0, math.rad(-OPEN_ANGLE), 0) * CFrame.new(halfWidth, 0, 0)
+-- Build RemoteEvents folder ------------------------------------------------
+local remoteFolder      = Instance.new("Folder")
+remoteFolder.Name       = GameConstants.REMOTE_FOLDER_NAME
+remoteFolder.Parent     = Shared
 
-local function animateDoor()
-	-- Slowly swing open
-	local openTween = TweenService:Create(
-		doorPanel,
-		TweenInfo.new(OPEN_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-		{ CFrame = openCFrame }
-	)
-	openTween:Play()
-	openTween.Completed:Wait()
-
-	task.wait(PAUSE_OPEN)
-
-	-- Snap shut fast
-	local closeTween = TweenService:Create(
-		doorPanel,
-		TweenInfo.new(CLOSE_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-		{ CFrame = closedCFrame }
-	)
-	closeTween:Play()
-	closeTween.Completed:Wait()
-
-	task.wait(PAUSE_SHUT)
+for _, name in pairs(RE) do
+    if type(name) == "string" then
+        local evt = Instance.new("RemoteEvent")
+        evt.Name  = name
+        evt.Parent = remoteFolder
+    end
 end
 
-while true do
-	animateDoor()
+-- Services -----------------------------------------------------------------
+local DataService     = require(script.DataService)
+local MarketService   = require(script.MarketService)
+local MiningService   = require(script.MiningService)
+local SellingService  = require(script.SellingService)
+local UpgradeService  = require(script.UpgradeService)
+local ContractService = require(script.ContractService)
+local RemoteHandler   = require(script.RemoteHandler)
+
+DataService.init()
+MarketService.init()
+
+MiningService.init({
+    onOreAwarded = function(player: Player, oreType: string, amount: number)
+        ContractService.onOreAwarded(player, oreType, amount)
+    end,
+})
+
+SellingService.init()
+UpgradeService.init()
+ContractService.init()
+RemoteHandler.init(DataService, MiningService, SellingService, UpgradeService, ContractService, MarketService)
+
+-- Player lifecycle ---------------------------------------------------------
+Players.PlayerAdded:Connect(function(player: Player)
+    DataService.loadPlayer(player)
+    task.wait(2)
+    ContractService.ensureContracts(player)
+    MarketService.sendPricesToPlayer(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player: Player)
+    DataService.savePlayer(player)
+end)
+
+-- Handle players who joined before this script finished loading
+for _, player in ipairs(Players:GetPlayers()) do
+    task.spawn(function()
+        DataService.loadPlayer(player)
+        task.wait(2)
+        ContractService.ensureContracts(player)
+        MarketService.sendPricesToPlayer(player)
+    end)
 end
+
+print("[Server] Mining Corporation initialised.")
