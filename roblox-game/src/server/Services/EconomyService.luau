@@ -40,31 +40,48 @@ function EconomyService.getBalance(player)
 end
 
 -- ── SellOre handler ─────────────────────────────────────────────────────────
--- Client sends an empty SellOre event — no payload is used or trusted.
--- Server re-reads the actual stored inventory and calculates independently.
+-- Two modes:
+--   SellOre:FireServer()             → sell all (no args)
+--   SellOre:FireServer(oreType, qty) → sell a specific quantity of one ore type
+-- All values are re-validated server-side — no client number is trusted.
 
-SellOre.OnServerEvent:Connect(function(player)
+SellOre.OnServerEvent:Connect(function(player, oreType, quantity)
 	local InventoryService = getInventoryService()
 	local inv = InventoryService.getInventory(player)
 	if not inv or next(inv.items) == nil then return end
 
-	-- Recalculate total entirely from server-side data
-	local total = 0
-	for oreType, qty in pairs(inv.items) do
+	if oreType ~= nil then
+		-- ── Partial sell ──────────────────────────────────────────────────
+		if type(oreType) ~= "string" then return end
 		local oreData = OreConfig[oreType]
-		if oreData then
-			total += oreData.BaseValue * qty
+		if not oreData then return end
+
+		local requested = (type(quantity) == "number") and math.floor(quantity) or 0
+		if requested <= 0 then return end
+		requested = math.min(requested, inv.items[oreType] or 0)
+		if requested <= 0 then return end
+
+		local removed = InventoryService.removeOre(player, oreType, requested)
+		if removed <= 0 then return end
+
+		local earned = oreData.BaseValue * removed
+		EconomyService.addCredits(player, earned)
+		print(string.format("[EconomyService] %s sold %d × %s for ₡%d (balance: ₡%d)",
+			player.Name, removed, oreType, earned, balances[player]))
+	else
+		-- ── Sell all ──────────────────────────────────────────────────────
+		local total = 0
+		for t, qty in pairs(inv.items) do
+			local oreData = OreConfig[t]
+			if oreData then total += oreData.BaseValue * qty end
 		end
+		if total <= 0 then return end
+
+		InventoryService.clearInventory(player)
+		EconomyService.addCredits(player, total)
+		print(string.format("[EconomyService] %s sold all inventory for ₡%d (balance: ₡%d)",
+			player.Name, total, balances[player]))
 	end
-
-	if total <= 0 then return end
-
-	-- Clear inventory first, then credit — both push their own client updates
-	InventoryService.clearInventory(player)
-	EconomyService.addCredits(player, total)
-
-	print(string.format("[EconomyService] %s sold inventory for ₡%d (balance: ₡%d)",
-		player.Name, total, balances[player]))
 end)
 
 -- ── Player lifecycle ───────────────────────────────────────────────────────

@@ -71,13 +71,33 @@ function InventoryService.getInventory(player)
 end
 
 -- Empties the player's inventory and pushes an Inv_Update to the client.
--- Called by EconomyService after a successful sell transaction.
+-- Called by EconomyService after a successful sell-all transaction.
 function InventoryService.clearInventory(player)
 	local inv = inventories[player]
 	if not inv then return end
 	inv.items         = {}
 	inv.currentWeight = 0
 	pushUpdate(player)
+end
+
+-- Removes a specific quantity of one ore type.
+-- Quantity is clamped to what the player actually has.
+-- Returns the amount actually removed (may be less than requested).
+function InventoryService.removeOre(player, oreType, quantity)
+	local inv = inventories[player]
+	if not inv then return 0 end
+	local oreData = OreConfig[oreType]
+	if not oreData then return 0 end
+
+	local available = inv.items[oreType] or 0
+	local removing  = math.min(math.floor(quantity), available)
+	if removing <= 0 then return 0 end
+
+	inv.items[oreType]  = available - removing
+	if inv.items[oreType] <= 0 then inv.items[oreType] = nil end
+	inv.currentWeight   = math.max(0, inv.currentWeight - oreData.Weight * removing)
+	pushUpdate(player)
+	return removing
 end
 
 -- ── Player lifecycle ───────────────────────────────────────────────────────
