@@ -70,13 +70,10 @@ local function createHealthBar(part)
 end
 
 local function setHealthBar(part, healthPct)
+	-- Only updates the bar's size and colour; Enabled is managed client-side
+	-- so each player can independently show/hide based on their distance.
 	local gui = part:FindFirstChild("VeinHealthBar")
 	if not gui then return end
-	if healthPct >= 1 then
-		gui.Enabled = false  -- hide at full health (undamaged / just respawned)
-		return
-	end
-	gui.Enabled = true  -- reveal on first hit
 	local bar = gui.Background and gui.Background:FindFirstChild("Bar")
 	if not bar then return end
 	bar.Size             = UDim2.new(math.max(0, healthPct), 0, 1, 0)
