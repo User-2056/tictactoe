@@ -31,7 +31,9 @@ local remoteNames = {
 	-- Server -> Owning player only  (economy)
 	"Eco_CreditsUpdate", -- payload: balance (number)
 	-- Server -> Owning player only  (equipment)
-	"Eq_Update",         -- payload: pickaxeId (string), backpackId (string)
+	"Eq_Update",         -- payload: pickaxeId, backpackId, ownedPickaxes[], ownedBackpacks[]
+	-- Client -> Server  (equipment)
+	"EquipItem",         -- payload: itemType ("pickaxe"|"backpack"), itemId
 }
 
 for _, name in ipairs(remoteNames) do

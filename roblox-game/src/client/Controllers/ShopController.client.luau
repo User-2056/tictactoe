@@ -11,6 +11,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 local Remotes           = ReplicatedStorage:WaitForChild("Remotes")
 local PurchaseEquipment = Remotes:WaitForChild("PurchaseEquipment")
+local EquipItem         = Remotes:WaitForChild("EquipItem")
 local Eq_Update         = Remotes:WaitForChild("Eq_Update")
 local Eco_CreditsUpdate = Remotes:WaitForChild("Eco_CreditsUpdate")
 
@@ -21,6 +22,8 @@ local EquipmentConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitFor
 local cachedBalance      = 0
 local equippedPickaxeId  = "starter_pickaxe"
 local equippedBackpackId = "starter_backpack"
+local ownedPickaxes      = { ["starter_pickaxe"]  = true }
+local ownedBackpacks     = { ["starter_backpack"] = true }
 local pendingPurchaseId  = nil   -- set when purchase fires; cleared when Eq_Update confirms it
 local isShopOpen         = false
 
@@ -285,13 +288,20 @@ local function makeItemCard(parent, itemType, item, order)
 	local capturedType = itemType
 	local capturedItem = item
 	btn.MouseButton1Click:Connect(function()
-		if capturedItem.Cost <= 0 then return end
 		local isEquipped = (capturedType == "pickaxe"  and equippedPickaxeId  == capturedItem.Id)
 		               or  (capturedType == "backpack" and equippedBackpackId == capturedItem.Id)
 		if isEquipped then return end
-		if cachedBalance < capturedItem.Cost then return end
-		pendingPurchaseId = capturedItem.Id
-		PurchaseEquipment:FireServer(capturedType, capturedItem.Id)
+
+		local isOwned = (capturedType == "pickaxe"  and ownedPickaxes[capturedItem.Id])
+		            or  (capturedType == "backpack" and ownedBackpacks[capturedItem.Id])
+
+		if isOwned then
+			EquipItem:FireServer(capturedType, capturedItem.Id)
+		else
+			if cachedBalance < capturedItem.Cost then return end
+			pendingPurchaseId = capturedItem.Id
+			PurchaseEquipment:FireServer(capturedType, capturedItem.Id)
+		end
 	end)
 
 	table.insert(itemEntries, { btn = btn, itemType = itemType, item = item })
@@ -311,14 +321,20 @@ local function refreshButtons()
 
 		local isEquipped = (kind == "pickaxe"  and equippedPickaxeId  == item.Id)
 		               or  (kind == "backpack" and equippedBackpackId == item.Id)
-		local isFree     = item.Cost <= 0
+		local isOwned    = (kind == "pickaxe"  and ownedPickaxes[item.Id])
+		               or  (kind == "backpack" and ownedBackpacks[item.Id])
 		local canAfford  = cachedBalance >= item.Cost
 
-		if isEquipped or isFree then
+		if isEquipped then
 			btn.Text             = "Equipped"
 			btn.BackgroundColor3 = Color3.fromRGB(45, 155, 75)
 			btn.TextColor3       = Color3.fromRGB(255, 255, 255)
 			btn.AutoButtonColor  = false
+		elseif isOwned then
+			btn.Text             = "Equip"
+			btn.BackgroundColor3 = Color3.fromRGB(70, 90, 170)
+			btn.TextColor3       = Color3.fromRGB(255, 255, 255)
+			btn.AutoButtonColor  = true
 		elseif canAfford then
 			btn.Text             = "Buy"
 			btn.BackgroundColor3 = Color3.fromRGB(50, 110, 200)
@@ -405,11 +421,16 @@ Eco_CreditsUpdate.OnClientEvent:Connect(function(balance)
 	if isShopOpen then refreshButtons() end
 end)
 
-Eq_Update.OnClientEvent:Connect(function(pickaxeId, backpackId)
+Eq_Update.OnClientEvent:Connect(function(pickaxeId, backpackId, ownedPickaxeList, ownedBackpackList)
 	local prevPickaxe  = equippedPickaxeId
 	local prevBackpack = equippedBackpackId
 	equippedPickaxeId  = pickaxeId
 	equippedBackpackId = backpackId
+
+	ownedPickaxes  = {}
+	ownedBackpacks = {}
+	for _, id in ipairs(ownedPickaxeList  or {}) do ownedPickaxes[id]  = true end
+	for _, id in ipairs(ownedBackpackList or {}) do ownedBackpacks[id] = true end
 
 	if isShopOpen then refreshButtons() end
 
