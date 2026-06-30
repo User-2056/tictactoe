@@ -51,6 +51,7 @@ local function createHealthBar(part)
 	billboard.Size          = UDim2.new(0, 80, 0, 10)
 	billboard.StudsOffset   = Vector3.new(0, part.Size.Y / 2 + 1.4, 0)
 	billboard.AlwaysOnTop   = false
+	billboard.Enabled       = false  -- hidden until first hit
 	billboard.Parent        = part
 
 	local bg = Instance.new("Frame")
@@ -71,6 +72,11 @@ end
 local function setHealthBar(part, healthPct)
 	local gui = part:FindFirstChild("VeinHealthBar")
 	if not gui then return end
+	if healthPct >= 1 then
+		gui.Enabled = false  -- hide at full health (undamaged / just respawned)
+		return
+	end
+	gui.Enabled = true  -- reveal on first hit
 	local bar = gui.Background and gui.Background:FindFirstChild("Bar")
 	if not bar then return end
 	bar.Size             = UDim2.new(math.max(0, healthPct), 0, 1, 0)
@@ -96,18 +102,18 @@ local function addEffects(part)
 	dust.Rate               = 0
 	dust.Parent             = part
 
-	-- Hit sound (short stone impact)
+	-- Hit sound (short rock impact, 0.9s — ProSoundEffects)
 	local hit               = Instance.new("Sound")
 	hit.Name                = "HitSound"
-	hit.SoundId             = "rbxassetid://131070687"
+	hit.SoundId             = "rbxassetid://9118617342"
 	hit.Volume              = 0.55
 	hit.RollOffMaxDistance  = 35
 	hit.Parent              = part
 
-	-- Break sound (heavier rock crack)
+	-- Break sound (rock drop/crack, 1.5s — ProSoundEffects)
 	local brk               = Instance.new("Sound")
 	brk.Name                = "BreakSound"
-	brk.SoundId             = "rbxassetid://131070699"
+	brk.SoundId             = "rbxassetid://9118587494"
 	brk.Volume              = 0.8
 	brk.RollOffMaxDistance  = 45
 	brk.Parent              = part
@@ -161,6 +167,7 @@ local function respawnVein(veinState)
 	part.Color         = config.Color
 	part.Material      = Enum.Material.SmoothPlastic
 	part.Transparency  = 0
+	part.CanCollide    = true
 
 	local cd = part:FindFirstChild("ClickDetector")
 	if cd then cd.MaxActivationDistance = MINING_RANGE end
@@ -208,6 +215,7 @@ local function onMineOre(player, veinName)
 		local cd = veinState.part:FindFirstChild("ClickDetector")
 		if cd then cd.MaxActivationDistance = 0 end
 		veinState.part.Transparency = 1
+		veinState.part.CanCollide   = false  -- player walks through the broken vein
 
 		awardOre(player, veinState.oreType, 1)
 
