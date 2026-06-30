@@ -29,41 +29,42 @@ local mineFolder = workspace:WaitForChild("StarterMine")
 local damagedVeins    = {}  -- { [veinName] = true }
 local HEALTH_BAR_RANGE = 22  -- studs; slightly wider than mining range so bar stays visible while swinging
 
--- ── Helpers ──────────────────────────────────────────────────────────────────
+-- ── Tool interaction ─────────────────────────────────────────────────────────
+-- Roblox silences ClickDetectors when a Tool is equipped — clicks go to
+-- Tool.Activated instead. We read Mouse.Target to find the clicked vein.
 
-local function findVein(name)
-	return mineFolder:FindFirstChild(name)
+local mouse = player:GetMouse()
+
+local function onPickaxeActivated()
+	local target = mouse.Target
+	if not target then return end
+	if target.Parent ~= mineFolder then return end
+	if not target:GetAttribute("OreType") then return end
+	MineOre:FireServer(target.Name)
 end
 
--- ── Click interaction setup ───────────────────────────────────────────────────
--- OreService (server) adds a ClickDetector to each vein Part and it replicates.
--- We wait for it, then wire up click -> FireServer.
-
-local function setupVein(part)
-	if not (part:IsA("BasePart") and part:GetAttribute("OreType")) then return end
-
-	local cd = part:WaitForChild("ClickDetector", 10)
-	if not cd then return end
-
-	cd.MouseClick:Connect(function()
-		MineOre:FireServer(part.Name)
-	end)
+local function watchTool(item)
+	if item:IsA("Tool") and item.Name == "Pickaxe" then
+		item.Activated:Connect(onPickaxeActivated)
+	end
 end
 
-for _, child in ipairs(mineFolder:GetChildren()) do
-	task.spawn(setupVein, child)
+local function onCharacterAdded(character)
+	character.ChildAdded:Connect(watchTool)
+	local existing = character:FindFirstChild("Pickaxe")
+	if existing then watchTool(existing) end
 end
 
-mineFolder.ChildAdded:Connect(function(child)
-	task.spawn(setupVein, child)
-end)
+local character = player.Character or player.CharacterAdded:Wait()
+onCharacterAdded(character)
+player.CharacterAdded:Connect(onCharacterAdded)
 
 -- ── Hit effect: dust + sound ──────────────────────────────────────────────────
 
 Ore_VeinHit.OnClientEvent:Connect(function(veinName, healthPct)
 	damagedVeins[veinName] = true  -- mark so heartbeat can show the health bar
 
-	local part = findVein(veinName)
+	local part = mineFolder:FindFirstChild(veinName)
 	if not part then return end
 
 	local dust = part:FindFirstChild("DustEffect")
@@ -78,7 +79,7 @@ end)
 Ore_VeinBroke.OnClientEvent:Connect(function(veinName)
 	damagedVeins[veinName] = nil  -- vein is gone; clear so bar won't reappear
 
-	local part = findVein(veinName)
+	local part = mineFolder:FindFirstChild(veinName)
 	if not part then return end
 
 	local dust = part:FindFirstChild("DustEffect")

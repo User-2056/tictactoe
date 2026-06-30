@@ -37,20 +37,22 @@ local function createPickaxeTool()
 	shaft.Material          = Enum.Material.Wood
 	shaft.Parent            = tool
 
-	-- Head (the metal pick end, welded to the shaft)
+	-- Head (the metal pick crossbar, welded at the front tip of the shaft)
 	local head              = Instance.new("Part")
 	head.Name               = "Head"
-	head.Size               = Vector3.new(0.15, 0.5, 0.7)
+	head.Size               = Vector3.new(0.85, 0.22, 0.22)  -- wide horizontal bar
 	head.Color              = Color3.fromRGB(163, 162, 165)
 	head.Material           = Enum.Material.Metal
 	head.Parent             = tool
 
-	local weld              = Instance.new("WeldConstraint")
+	-- Use Weld (not WeldConstraint) so C0/C1 defines the offset explicitly.
+	-- WeldConstraint captures the current world CFrame delta — useless in the Backpack
+	-- where both parts sit at (0,0,0). Weld.C0 is always relative to Part0.
+	local weld              = Instance.new("Weld")
 	weld.Part0              = shaft
 	weld.Part1              = head
+	weld.C0                 = CFrame.new(0, 0, 0.7)   -- head sits at the front tip of shaft
 	weld.Parent             = shaft
-	-- Place head at the front tip of the shaft, rotated 90° so it sits crossways
-	head.CFrame             = shaft.CFrame * CFrame.new(0, 0, 0.7) * CFrame.Angles(0, 0, math.rad(90))
 
 	return tool
 end
@@ -227,6 +229,10 @@ local function respawnVein(veinState)
 
 	setHealthBar(part, 1)
 
+	-- Restore glow for gold, suppress for everything else
+	local light = part:FindFirstChildOfClass("PointLight")
+	if light then light.Enabled = (newOreType == "gold") end
+
 	Remotes.Ore_VeinSpawned:FireAllClients(part.Name, newOreType)
 	print(string.format("[OreService] Vein %s respawned as %s", part.Name, newOreType))
 end
@@ -274,6 +280,10 @@ local function onMineOre(player, veinName)
 		if cd then cd.MaxActivationDistance = 0 end
 		veinState.part.Transparency = 1
 		veinState.part.CanCollide   = false  -- player walks through the broken vein
+
+		-- Kill any glow so gold ore doesn't shine through its invisible body
+		local light = veinState.part:FindFirstChildOfClass("PointLight")
+		if light then light.Enabled = false end
 
 		awardOre(player, veinState.oreType, 1)
 
