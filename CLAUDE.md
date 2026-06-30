@@ -1,7 +1,7 @@
-﻿# CLAUDE.md
+# CLAUDE.md
 
 Guidance for Claude Code when working in this repository.
-Auto-updated at end of every session. Last updated: 2026-06-29.
+Auto-updated at end of every session. Last updated: 2026-06-30.
 
 ---
 
@@ -17,20 +17,13 @@ Auto-updated at end of every session. Last updated: 2026-06-29.
 ## Roblox Game: Mining Corporation
 
 ### Concept
-A Roblox idle/active mining game. Players mine ore nodes, sell ore for coins,
-upgrade pickaxes and bag capacity, and complete mining contracts.
+A Roblox multiplayer mining/tycoon game. Players mine ore nodes, sell ore for coins,
+purchase better equipment, unlock new regions, and complete mining contracts.
 
-### MVP Scope (Stage 1 -- IN PROGRESS)
-- One mine (StarterMine region)
-- 4 ore types: Stone, Coal, Iron, Gold
-- 4 pickaxe tiers: Starter, Iron, Steel, Gold
-- 5 bag capacity tiers
-- 3 active contracts at a time (mine X of Y ore)
-- Daily market price variation (seeded, deterministic)
-- DataStore save/load with autosave every 60s
-
-### NOT in Stage 1
-- Multiple regions, automation, HQ, marketplace, crafting
+### Milestone Status
+- **Milestone 1 (Scaffolding) — COMPLETE**: All folders, skeleton services, skeleton controllers,
+  config modules, RemoteEvents, and StarterGui ScreenGuis are in place. Nothing is playable yet.
+- **Milestone 2 and beyond**: Not started.
 
 ---
 
@@ -38,17 +31,31 @@ upgrade pickaxes and bag capacity, and complete mining contracts.
 
 **Installed:** Rojo v7.6.1 at `C:\Users\Taylor\.local\bin\rojo.exe`
 **Project:** `roblox-game/`
+**Project file:** `roblox-game/default.project.json`
 
 **Folder mapping:**
-| Disk path | In-game location |
-|---|---|
-| `src/server/` | `ServerScriptService.Server` (Script) |
-| `src/client/` | `StarterPlayer.StarterPlayerScripts.Client` (LocalScript) |
-| `src/shared/` | `ReplicatedStorage.Shared` (Folder) |
+| Disk path | In-game location | Type |
+|---|---|---|
+| `src/shared/Config/` | `ReplicatedStorage.Config` | Folder of ModuleScripts |
+| `src/server/Bootstrap.server.luau` | `ServerScriptService.Bootstrap` | Script (auto-runs) |
+| `src/server/Services/` | `ServerScriptService.Services` | Folder of ModuleScripts |
+| `src/server/Data/` | `ServerScriptService.Data` | Folder with Script |
+| `src/client/Controllers/` | `StarterPlayer.StarterPlayerScripts.Controllers` | Folder of LocalScripts |
+
+**Declared in project.json (not file-backed, just exist as empty folders):**
+- `ReplicatedStorage.Shared` — placeholder for future shared utilities
+- `ReplicatedStorage.Assets` — placeholder for models/sounds
+- `ServerScriptService.Systems` — placeholder for larger gameplay systems
+
+**Created at runtime by Bootstrap (not in project.json):**
+- `ReplicatedStorage.Remotes` — Folder containing all 6 RemoteEvents
+
+**Created via MCP (not Rojo-managed):**
+- `StarterGui.HUD`, `StarterGui.Shop`, `StarterGui.Market`, `StarterGui.Contracts`, `StarterGui.Settings`
 
 **To start syncing:**
 1. Open terminal in `roblox-game/` and run: `rojo serve`
-2. In Studio: Rojo plugin -> Connect
+2. In Studio: Rojo plugin → Connect
 3. Scripts in `src/` live-sync into Studio automatically
 
 ---
@@ -68,152 +75,91 @@ An MCP server bridges Claude Code to Roblox Studio for placing world objects.
 ## Architecture
 
 ### Security model
-FilteringEnabled is ON. All economy and inventory mutations are server-authoritative.
-Clients fire RemoteEvents to request; server validates and responds.
+FilteringEnabled is ON. All economy and inventory mutations will be server-authoritative.
+Clients fire RemoteEvents to request actions; server validates and responds.
 
-### RemoteEvent flow
-Mining and Selling use `ProximityPrompt.Triggered` (fires on server automatically).
-All other client requests go through RemoteEvents in `ReplicatedStorage.Shared.RemoteEvents`.
+### Naming convention
+- `XxxService` = server-side module (in `ServerScriptService.Services`)
+- `XxxController` = client-side LocalScript (in `StarterPlayer.StarterPlayerScripts.Controllers`)
+- `XxxConfig` = shared config module (in `ReplicatedStorage.Config`)
 
-### Dependency graph (server)
-```
-GameConstants
-    <- DataService           (DataStore, cache, autosave)
-    <- MarketService         (seeded daily prices)
-    <- MiningService         (node scanning, ProximityPrompt, respawn)
-         |-- onOreAwarded -->
-    <- ContractService       (generate, track, reward)
-    <- SellingService        (sell zone ProximityPrompt)
-    <- UpgradeService        (pickaxe + bag upgrades)
-    <- RemoteHandler         (binds client->server remotes)
-```
-
-### Data structure saved per player
-```lua
-{
-    money                = 0,
-    inventory            = { stone=0, coal=0, iron=0, gold=0 },
-    pickaxeTier          = "Starter",
-    capacityTier         = 1,         -- 1-5, see UpgradeConfig
-    contracts            = { ... },   -- array of 3 contract tables
-    contractsLastRefresh = 0,         -- os.time() of last refresh
-    version              = 1,
-}
-```
+### RemoteEvents (created by Bootstrap at runtime in `ReplicatedStorage.Remotes`)
+| Name | Intended direction | Purpose |
+|---|---|---|
+| `MineOre` | C->S | Player requests to mine a node |
+| `SellOre` | C->S | Player requests to sell inventory |
+| `PurchaseEquipment` | C->S | Player buys a pickaxe/drill upgrade |
+| `AcceptContract` | C->S | Player accepts a contract |
+| `UnlockLicence` | C->S | Player purchases a region licence |
+| `CollectDrillOutput` | C->S | Player collects output from an auto-drill |
 
 ---
 
 ## File Index
 
-### Shared (`src/shared/`)
-| File | Purpose |
+### Config (`src/shared/Config/`) — all return empty tables for now
+| File | Will eventually contain |
 |---|---|
-| `GameConstants.luau` | All tunable numbers in one place |
-| `RemoteEvents.luau` | String constants for every event name |
-| `Config/OreConfig.luau` | Ore data + weighted random roll |
-| `Config/PickaxeConfig.luau` | Pickaxe tier stats and costs |
-| `Config/MarketConfig.luau` | Price multiplier bounds |
-| `Config/UpgradeConfig.luau` | Bag capacity tier data |
-| `Config/ContractConfig.luau` | Contract generation templates |
+| `OreConfig.luau` | Ore names, rarity, base sell prices, hit count to mine |
+| `EquipmentConfig.luau` | Pickaxe/drill tiers, costs, mining speed multipliers |
+| `RegionConfig.luau` | Region names, unlock costs, available ore types per region |
+| `ContractConfig.luau` | Contract templates (target ore, quantity, reward) |
+| `MarketConfig.luau` | Daily price multiplier bounds per ore type |
 
 ### Server (`src/server/`)
 | File | Purpose |
 |---|---|
-| `init.server.luau` | Bootstrap: create remotes, init all services |
-| `DataService.luau` | DataStore cache, autosave, schema migration |
-| `MarketService.luau` | Seeded daily ore price calculation |
-| `MiningService.luau` | Node scanning, ProximityPrompt, health, respawn |
-| `SellingService.luau` | Sell zone prompt, inventory -> money |
-| `UpgradeService.luau` | Pickaxe and bag upgrade validation |
-| `ContractService.luau` | Contract gen, progress tracking, rewards |
-| `RemoteHandler.luau` | Binds client->server remotes to service fns |
+| `Bootstrap.server.luau` | Creates Remotes folder + all RemoteEvents, then requires all services |
+| `Services/OreService.luau` | Will scan Workspace for ore nodes, attach ProximityPrompts, handle respawn |
+| `Services/InventoryService.luau` | Will manage per-player ore inventory and bag capacity |
+| `Services/MarketService.luau` | Will calculate seeded daily ore sell prices |
+| `Services/ContractService.luau` | Will generate, track, and reward mining contracts |
+| `Services/EquipmentService.luau` | Will validate and apply pickaxe/drill purchase upgrades |
+| `Services/RegionService.luau` | Will track unlocked regions per player, handle licence purchase |
+| `Services/DataService.luau` | Will save/load player data via DataStore with autosave |
+| `Data/DataService.server.luau` | Tests DataStore connection on startup; prints result to Output |
 
 ### Client (`src/client/`)
 | File | Purpose |
 |---|---|
-| `init.client.luau` | Bootstrap: wait for remotes, init all modules |
-| `RemoteProxy.luau` | Cached remote access (fire / connect helpers) |
-| `HUDController.luau` | Money / pickaxe / bag overlay (top-left) |
-| `MiningClient.luau` | Hit VFX, floating damage text |
-| `InventoryUI.luau` | Ore list + market value, toggle I |
-| `MarketUI.luau` | Today's prices panel (top-right) |
-| `ShopUI.luau` | Pickaxe + bag upgrade shop |
-| `ContractUI.luau` | Contract progress panel, toggle C |
+| `Controllers/MiningController.client.luau` | Will handle mining VFX, animations, floating text (client-side visuals only) |
+| `Controllers/InventoryController.client.luau` | Will display ore inventory and bag capacity on the HUD |
+
+### StarterGui (created via MCP, not file-backed)
+| Name | Will eventually contain |
+|---|---|
+| `HUD` | Coins, equipment tier, bag capacity bar |
+| `Shop` | Equipment purchase UI |
+| `Market` | Daily ore prices panel |
+| `Contracts` | Active contracts and progress bars |
+| `Settings` | Player settings/options |
 
 ---
 
-## Studio World Setup (required before mining works)
-
-MiningService scans Workspace for Parts with the `OreType` attribute.
-SellingService scans for Parts with `IsSellZone = true`.
-ShopUI scans for Parts with `IsPickaxeShop = true`.
-
-**Ore nodes (place in a Model named StarterMine):**
-- Part, Size ~(3,3,3), Anchored
-- Attribute `OreType` (string): "stone" | "coal" | "iron" | "gold"
-- Attribute `Region` (string): "StarterMine"
-- Suggest 15 nodes: 7 stone, 5 coal, 2 iron, 1 gold
-
-**Sell Zone:**
-- Part, large flat, Anchored
-- Attribute `IsSellZone` (bool): true
-- SellingService attaches the ProximityPrompt automatically
-
-**Pickaxe Shop:**
-- Part, Anchored
-- Attribute `IsPickaxeShop` (bool): true
-- Add a child ProximityPrompt manually (ActionText = "Open Shop")
-- ShopUI opens the GUI when the prompt fires client-side
-
----
-
-## Key Bindings (in game)
-- `I` -- toggle Inventory panel
-- `C` -- toggle Contracts panel
-- `E` -- activate nearby ProximityPrompt (mine / sell / open shop)
-
----
-
-## RemoteEvents Reference
-
-| Name | Direction | Payload |
-|---|---|---|
-| `Data_Update` | S->C | full player data table |
-| `Mining_NodeDamaged` | S->All | {nodeId, healthRemaining, maxHealth} |
-| `Mining_NodeRespawned` | S->All | {nodeId, oreType} |
-| `Market_PricesUpdated` | S->All | {[oreType]: price} |
-| `Sell_Result` | S->C | {success, moneyEarned, message} |
-| `Upgrade_Result` | S->C | {success, type, newTier, message} |
-| `Contract_Updated` | S->C | contracts array |
-| `Upgrade_Pickaxe` | C->S | tier string |
-| `Upgrade_Capacity` | C->S | (none) |
-| `Contract_Refresh` | C->S | (none) |
-
----
-
-## How to Test (Stage 1 checklist)
+## How to Verify Milestone 1
 
 1. `rojo serve` in `roblox-game/`, connect in Studio
-2. Press Play -> Output should show each service init line
-3. HUD overlay appears top-left (coins: 0, Pickaxe: Starter, Bag: 0/50)
-4. Market prices panel appears top-right
-5. Place ore nodes in Workspace with OreType attribute -> ProximityPrompts appear
-6. Mine node -> floating text, inventory updates, contracts track
-7. Walk to Sell Zone -> sell all -> coins increase, inventory clears
-8. Press I -> inventory panel shows ore quantities and coin values
-9. Press C -> contract panel shows 3 contracts with progress bars
-10. Go to shop -> buy pickaxe -> tier updates in HUD, mining is faster
-11. Leave and rejoin -> coins and inventory persist (DataStore)
+2. Press Play
+3. Output window should show (in order):
+   ```
+   [Bootstrap] Created Remotes folder with 6 RemoteEvents
+   [OreService] Loaded
+   [InventoryService] Loaded
+   [MarketService] Loaded
+   [ContractService] Loaded
+   [EquipmentService] Loaded
+   [RegionService] Loaded
+   [DataService] Loaded
+   [Bootstrap] All services loaded — Mining Corporation server is ready!
+   [MiningController] Loaded
+   [InventoryController] Loaded
+   [DataService] DataStore connection confirmed — PlayerData_v1 is accessible.
+   ```
+4. In the Explorer panel, confirm `ReplicatedStorage.Remotes` contains 6 RemoteEvents
+5. In `StarterGui`, confirm HUD, Shop, Market, Contracts, Settings ScreenGuis exist
 
----
-
-## Future Expansion Notes
-
-- **Multiple regions**: Add region key to OreConfig, new Model in Workspace with Region attribute
-- **Automation**: New AutomationService + AutoMiner instances; uses existing MiningService.handleSwing
-- **HQ**: Separate place or top-level region; add HQService
-- **Marketplace**: PlayerToPlayer trades via RemoteFunction + DataService transaction helpers
-- **Crafting**: CraftingConfig + CraftingService; reads inventory via DataService.getPlayerData
+**If DataStore prints a warning instead:** Go to Game Settings → Security → tick
+"Enable Studio Access to API Services", then Play again.
 
 ---
 
