@@ -114,7 +114,7 @@ addCorner(closeBtn, 6)
 
 -- Upgrade confirmation sound (short positive chime)
 local upgradeSound            = Instance.new("Sound")
-upgradeSound.SoundId          = "rbxassetid://9119745960"
+upgradeSound.SoundId          = "rbxassetid://104144989520923"
 upgradeSound.Volume           = 0.7
 upgradeSound.Parent           = shopScreen
 
