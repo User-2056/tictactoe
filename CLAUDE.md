@@ -22,8 +22,13 @@ purchase better equipment, unlock new regions, and complete mining contracts.
 
 ### Milestone Status
 - **Milestone 1 (Scaffolding) — COMPLETE**: All folders, skeleton services, skeleton controllers,
-  config modules, RemoteEvents, and StarterGui ScreenGuis are in place. Nothing is playable yet.
-- **Milestone 2 and beyond**: Not started.
+  config modules, RemoteEvents, and StarterGui ScreenGuis are in place.
+- **Milestone 2 (Core Mining Loop) — COMPLETE**: OreConfig populated (4 ores); 14 ore nodes in
+  `Workspace.StarterMine`; full mining loop (click → server validate → damage → crack visuals →
+  health bar → break → award → respawn); Pickaxe Tool in StarterPack (MINING_POWER=25, Tier 1);
+  hit/break sounds + dust particles fire to all clients; ore reward popup on break;
+  no per-hit damage numbers; server-authoritative throughout.
+- **Milestone 3 and beyond**: Not started.
 
 ---
 
@@ -84,46 +89,50 @@ Clients fire RemoteEvents to request actions; server validates and responds.
 - `XxxConfig` = shared config module (in `ReplicatedStorage.Config`)
 
 ### RemoteEvents (created by Bootstrap at runtime in `ReplicatedStorage.Remotes`)
-| Name | Intended direction | Purpose |
+| Name | Direction | Purpose |
 |---|---|---|
-| `MineOre` | C->S | Player requests to mine a node |
-| `SellOre` | C->S | Player requests to sell inventory |
-| `PurchaseEquipment` | C->S | Player buys a pickaxe/drill upgrade |
-| `AcceptContract` | C->S | Player accepts a contract |
-| `UnlockLicence` | C->S | Player purchases a region licence |
-| `CollectDrillOutput` | C->S | Player collects output from an auto-drill |
+| `MineOre` | C→S | Player requests to mine a node |
+| `SellOre` | C→S | Player requests to sell inventory |
+| `PurchaseEquipment` | C→S | Player buys a pickaxe/drill upgrade |
+| `AcceptContract` | C→S | Player accepts a contract |
+| `UnlockLicence` | C→S | Player purchases a region licence |
+| `CollectDrillOutput` | C→S | Player collects output from an auto-drill |
+| `Ore_VeinHit` | S→all | Vein took damage — payload: veinName, healthPct |
+| `Ore_VeinBroke` | S→all | Vein destroyed — payload: veinName |
+| `Ore_VeinSpawned` | S→all | Vein respawned — payload: veinName, newOreType |
+| `Ore_OreAwarded` | S→miner | Ore awarded to mining player — payload: oreType, amount |
 
 ---
 
 ## File Index
 
-### Config (`src/shared/Config/`) — all return empty tables for now
-| File | Will eventually contain |
-|---|---|
-| `OreConfig.luau` | Ore names, rarity, base sell prices, hit count to mine |
-| `EquipmentConfig.luau` | Pickaxe/drill tiers, costs, mining speed multipliers |
-| `RegionConfig.luau` | Region names, unlock costs, available ore types per region |
-| `ContractConfig.luau` | Contract templates (target ore, quantity, reward) |
-| `MarketConfig.luau` | Daily price multiplier bounds per ore type |
+### Config (`src/shared/Config/`)
+| File | Status | Contains |
+|---|---|---|
+| `OreConfig.luau` | ✅ M2 | Stone/Coal/Iron/Gold — BaseValue, Weight, SpawnChance, VeinHP, RespawnSeconds, Color |
+| `EquipmentConfig.luau` | skeleton | Pickaxe/drill tiers, costs, mining speed multipliers |
+| `RegionConfig.luau` | skeleton | Region names, unlock costs, available ore types per region |
+| `ContractConfig.luau` | skeleton | Contract templates (target ore, quantity, reward) |
+| `MarketConfig.luau` | skeleton | Daily price multiplier bounds per ore type |
 
 ### Server (`src/server/`)
-| File | Purpose |
-|---|---|
-| `Bootstrap.server.luau` | Creates Remotes folder + all RemoteEvents, then requires all services |
-| `Services/OreService.luau` | Will scan Workspace for ore nodes, attach ProximityPrompts, handle respawn |
-| `Services/InventoryService.luau` | Will manage per-player ore inventory and bag capacity |
-| `Services/MarketService.luau` | Will calculate seeded daily ore sell prices |
-| `Services/ContractService.luau` | Will generate, track, and reward mining contracts |
-| `Services/EquipmentService.luau` | Will validate and apply pickaxe/drill purchase upgrades |
-| `Services/RegionService.luau` | Will track unlocked regions per player, handle licence purchase |
-| `Services/DataService.luau` | Will save/load player data via DataStore with autosave |
-| `Data/DataService.server.luau` | Tests DataStore connection on startup; prints result to Output |
+| File | Status | Purpose |
+|---|---|---|
+| `Bootstrap.server.luau` | ✅ M1 | Creates Remotes folder + 10 RemoteEvents, then requires all services |
+| `Services/OreService.luau` | ✅ M2 | Scans StarterMine, owns vein lifecycle, handles mining loop, awards ore |
+| `Services/InventoryService.luau` | skeleton | Will manage per-player ore inventory and bag capacity |
+| `Services/MarketService.luau` | skeleton | Will calculate seeded daily ore sell prices |
+| `Services/ContractService.luau` | skeleton | Will generate, track, and reward mining contracts |
+| `Services/EquipmentService.luau` | skeleton | Will validate and apply pickaxe/drill purchase upgrades |
+| `Services/RegionService.luau` | skeleton | Will track unlocked regions per player, handle licence purchase |
+| `Services/DataService.luau` | skeleton | Will save/load player data via DataStore with autosave |
+| `Data/DataService.server.luau` | ✅ M1 | Tests DataStore connection on startup; prints result to Output |
 
 ### Client (`src/client/`)
-| File | Purpose |
-|---|---|
-| `Controllers/MiningController.client.luau` | Will handle mining VFX, animations, floating text (client-side visuals only) |
-| `Controllers/InventoryController.client.luau` | Will display ore inventory and bag capacity on the HUD |
+| File | Status | Purpose |
+|---|---|---|
+| `Controllers/MiningController.client.luau` | ✅ M2 | Tool.Activated → MineOre; plays hit/break VFX + sounds; health bar visibility; ore popup |
+| `Controllers/InventoryController.client.luau` | skeleton | Will display ore inventory and bag capacity on the HUD |
 
 ### StarterGui (created via MCP, not file-backed)
 | Name | Will eventually contain |
