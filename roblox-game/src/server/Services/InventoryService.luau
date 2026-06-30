@@ -1,9 +1,83 @@
--- InventoryService: This module will eventually manage each player's ore inventory.
--- It will track how much of each ore type a player is carrying, enforce the
--- bag capacity limit, and provide functions to add or remove ore safely.
--- All inventory changes happen on the server so they cannot be faked.
+-- InventoryService: Per-player ore inventory with weight-based capacity.
+-- All mutations happen server-side. Clients receive read-only snapshots
+-- via Inv_Update after every change. The server never trusts client claims
+-- about inventory state.
+
+local Players           = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local OreConfig  = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("OreConfig"))
+local Remotes    = ReplicatedStorage:WaitForChild("Remotes")
+local Inv_Update = Remotes:WaitForChild("Inv_Update")
+local Inv_Full   = Remotes:WaitForChild("Inv_Full")
+
+local MAX_WEIGHT = 100  -- Starter Backpack capacity in kg
+
+-- keyed by Player →  { items = { [oreType] = qty }, currentWeight, maxWeight }
+local inventories = {}
+
 local InventoryService = {}
 
-print("[InventoryService] Loaded")
+-- ── Internal ───────────────────────────────────────────────────────────────
 
+local function pushUpdate(player)
+	local inv = inventories[player]
+	if not inv then return end
+	local itemsCopy = {}
+	for k, v in pairs(inv.items) do itemsCopy[k] = v end
+	Inv_Update:FireClient(player, itemsCopy, inv.currentWeight, inv.maxWeight)
+end
+
+local function initPlayer(player)
+	inventories[player] = {
+		items         = {},
+		currentWeight = 0,
+		maxWeight     = MAX_WEIGHT,
+	}
+	pushUpdate(player)
+end
+
+local function removePlayer(player)
+	inventories[player] = nil
+end
+
+-- ── Public API ─────────────────────────────────────────────────────────────
+
+-- Attempts to add `amount` units of `oreType` to `player`'s inventory.
+-- Returns true if successful, false if there was not enough capacity.
+-- When full, fires Inv_Full to the player instead of adding ore.
+function InventoryService.addOre(player, oreType, amount)
+	local inv = inventories[player]
+	if not inv then return false end
+
+	local oreData = OreConfig[oreType]
+	if not oreData then return false end
+
+	local addedWeight = oreData.Weight * amount
+
+	if inv.currentWeight + addedWeight > inv.maxWeight then
+		Inv_Full:FireClient(player)
+		return false
+	end
+
+	inv.items[oreType]  = (inv.items[oreType] or 0) + amount
+	inv.currentWeight   = inv.currentWeight + addedWeight
+	pushUpdate(player)
+	return true
+end
+
+function InventoryService.getInventory(player)
+	return inventories[player]
+end
+
+-- ── Player lifecycle ───────────────────────────────────────────────────────
+
+Players.PlayerAdded:Connect(initPlayer)
+Players.PlayerRemoving:Connect(removePlayer)
+
+for _, player in ipairs(Players:GetPlayers()) do
+	initPlayer(player)
+end
+
+print("[InventoryService] Loaded")
 return InventoryService

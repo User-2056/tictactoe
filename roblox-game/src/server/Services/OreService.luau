@@ -237,10 +237,19 @@ local function respawnVein(veinState)
 	print(string.format("[OreService] Vein %s respawned as %s", part.Name, newOreType))
 end
 
--- Placeholder — real implementation in Milestone 3 (InventoryService)
+-- Lazy-require so load order in Bootstrap doesn't matter
+local function getInventoryService()
+	return require(script.Parent.InventoryService)
+end
+
 local function awardOre(player, oreType, amount)
-	print(string.format("[OreService] AWARD → %s received %d × %s", player.Name, amount, oreType))
-	-- TODO Milestone 3: InventoryService.addOre(player, oreType, amount)
+	local granted = getInventoryService().addOre(player, oreType, amount)
+	if granted then
+		-- Ore_OreAwarded triggers the "+1 Coal" popup in MiningController
+		Remotes.Ore_OreAwarded:FireClient(player, oreType, amount)
+		print(string.format("[OreService] AWARD → %s received %d × %s", player.Name, amount, oreType))
+	end
+	-- If not granted, InventoryService already fired Inv_Full to the player
 end
 
 -- ── Remote handler ─────────────────────────────────────────────────────────

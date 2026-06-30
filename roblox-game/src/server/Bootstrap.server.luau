@@ -23,6 +23,9 @@ local remoteNames = {
 	"Ore_VeinSpawned",  -- payload: veinName, newOreType
 	-- Server -> Mining player only
 	"Ore_OreAwarded",   -- payload: oreType, amount
+	-- Server -> Owning player only  (inventory)
+	"Inv_Update",       -- payload: items (table), currentWeight, maxWeight
+	"Inv_Full",         -- no payload; triggers the "bag full" notification
 }
 
 for _, name in ipairs(remoteNames) do
@@ -36,8 +39,8 @@ print("[Bootstrap] Created Remotes folder with", #remoteNames, "RemoteEvents")
 local Services = script.Parent.Services
 
 local serviceNames = {
+	"InventoryService",  -- must load before OreService so its module is cached
 	"OreService",
-	"InventoryService",
 	"MarketService",
 	"ContractService",
 	"EquipmentService",
