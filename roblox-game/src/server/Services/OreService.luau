@@ -18,6 +18,11 @@ local PICKAXE_NAME       = "Pickaxe"
 -- keyed by Part.Name  →  { part, oreType, currentHP, maxHP, active }
 local veins = {}
 
+-- Snapshot of each vein's satellite BasePart children at game start.
+-- Used by respawnVein to restore satellite state server-side so all clients
+-- receive the reset via normal property replication.
+local satSnapshots = {}  -- { [veinName] = { [childName] = { cf=CFrame, sz=Vector3 } } }
+
 -- ── Pickaxe tool ───────────────────────────────────────────────────────────
 
 local function createPickaxeTool()
@@ -212,6 +217,15 @@ local function initVein(part)
 		maxHP     = config.VeinHP,
 		active    = true,
 	}
+
+	-- Snapshot satellite BasePart children so respawnVein can restore them.
+	local snap = {}
+	for _, child in ipairs(part:GetChildren()) do
+		if child:IsA("BasePart") then
+			snap[child.Name] = { cf = child.CFrame, sz = child.Size }
+		end
+	end
+	satSnapshots[part.Name] = snap
 end
 
 local function respawnVein(veinState)
@@ -240,6 +254,21 @@ local function respawnVein(veinState)
 	-- Restore glow for gold, suppress for everything else
 	local light = part:FindFirstChildOfClass("PointLight")
 	if light then light.Enabled = (newOreType == "gold") end
+
+	-- Restore satellite BasePart children to their original CFrame/Size/Transparency.
+	-- Doing this server-side ensures all clients receive the reset via replication,
+	-- regardless of any client-side tween state from the break animation.
+	local snap = satSnapshots[part.Name] or {}
+	for _, child in ipairs(part:GetChildren()) do
+		if not child:IsA("BasePart") then continue end
+		local s = snap[child.Name]
+		if s then
+			child.CFrame = s.cf
+			child.Size   = s.sz
+		end
+		child.Transparency = 0
+		child.CanCollide   = child:GetAttribute("Role") ~= "ore"
+	end
 
 	Remotes.Ore_VeinSpawned:FireAllClients(part.Name, newOreType)
 	print(string.format("[OreService] Vein %s respawned as %s", part.Name, newOreType))
