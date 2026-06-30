@@ -1,24 +1,39 @@
 {
-  "name": "roblox-game",
+  "name": "MiningCorporation",
   "tree": {
     "$className": "DataModel",
 
     "ReplicatedStorage": {
+      "Config": {
+        "$path": "src/shared/Config"
+      },
       "Shared": {
-        "$path": "src/shared"
+        "$className": "Folder"
+      },
+      "Assets": {
+        "$className": "Folder"
       }
     },
 
     "ServerScriptService": {
-      "Server": {
-        "$path": "src/server"
+      "Bootstrap": {
+        "$path": "src/server/Bootstrap.server.luau"
+      },
+      "Services": {
+        "$path": "src/server/Services"
+      },
+      "Systems": {
+        "$className": "Folder"
+      },
+      "Data": {
+        "$path": "src/server/Data"
       }
     },
 
     "StarterPlayer": {
       "StarterPlayerScripts": {
-        "Client": {
-          "$path": "src/client"
+        "Controllers": {
+          "$path": "src/client/Controllers"
         }
       }
     },
@@ -31,32 +46,16 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Color": [
-            0.38823,
-            0.37254,
-            0.38823
-          ],
+          "Color": [0.38823, 0.37254, 0.38823],
           "Locked": true,
-          "Position": [
-            0,
-            -10,
-            0
-          ],
-          "Size": [
-            512,
-            20,
-            512
-          ]
+          "Position": [0, -10, 0],
+          "Size": [512, 20, 512]
         }
       }
     },
     "Lighting": {
       "$properties": {
-        "Ambient": [
-          0,
-          0,
-          0
-        ],
+        "Ambient": [0, 0, 0],
         "Brightness": 2,
         "GlobalShadows": true,
         "Outlines": false,
