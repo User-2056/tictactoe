@@ -9,11 +9,36 @@ local TweenService      = game:GetService("TweenService")
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
-local Remotes    = ReplicatedStorage:WaitForChild("Remotes")
-local Inv_Update = Remotes:WaitForChild("Inv_Update")
-local Inv_Full   = Remotes:WaitForChild("Inv_Full")
+local Remotes           = ReplicatedStorage:WaitForChild("Remotes")
+local Inv_Update        = Remotes:WaitForChild("Inv_Update")
+local Inv_Full          = Remotes:WaitForChild("Inv_Full")
+local Eco_CreditsUpdate = Remotes:WaitForChild("Eco_CreditsUpdate")
 
 local hud = playerGui:WaitForChild("HUD")
+
+-- ── Credits display (top-left) ──────────────────────────────────────────────
+
+local creditsLabel              = Instance.new("TextLabel")
+creditsLabel.Name               = "CreditsLabel"
+creditsLabel.Size               = UDim2.new(0, 150, 0, 36)
+creditsLabel.Position           = UDim2.new(0, 12, 0, 12)
+creditsLabel.BackgroundColor3   = Color3.fromRGB(15, 15, 15)
+creditsLabel.BackgroundTransparency = 0.35
+creditsLabel.BorderSizePixel    = 0
+creditsLabel.TextColor3         = Color3.fromRGB(215, 175, 30)
+creditsLabel.Font               = Enum.Font.GothamBold
+creditsLabel.TextSize           = 18
+creditsLabel.Text               = "₡ 0"
+creditsLabel.ZIndex             = 5
+creditsLabel.Parent             = hud
+
+local creditsCorner             = Instance.new("UICorner")
+creditsCorner.CornerRadius      = UDim.new(0, 7)
+creditsCorner.Parent            = creditsLabel
+
+Eco_CreditsUpdate.OnClientEvent:Connect(function(balance)
+	creditsLabel.Text = string.format("₡ %d", math.floor(balance))
+end)
 
 -- Display order and colours for the ore list
 local ORE_ORDER = { "stone", "coal", "iron", "gold" }

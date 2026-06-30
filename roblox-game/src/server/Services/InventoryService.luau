@@ -70,6 +70,16 @@ function InventoryService.getInventory(player)
 	return inventories[player]
 end
 
+-- Empties the player's inventory and pushes an Inv_Update to the client.
+-- Called by EconomyService after a successful sell transaction.
+function InventoryService.clearInventory(player)
+	local inv = inventories[player]
+	if not inv then return end
+	inv.items         = {}
+	inv.currentWeight = 0
+	pushUpdate(player)
+end
+
 -- ── Player lifecycle ───────────────────────────────────────────────────────
 
 Players.PlayerAdded:Connect(initPlayer)

@@ -28,6 +28,8 @@ local remoteNames = {
 	"Inv_Full",         -- no payload; triggers the "bag full" notification
 	-- Server -> Mining player only  (blocked hit feedback)
 	"Ore_HitBlocked",   -- payload: veinName; inventory full, hit did no damage
+	-- Server -> Owning player only  (economy)
+	"Eco_CreditsUpdate", -- payload: balance (number)
 }
 
 for _, name in ipairs(remoteNames) do
@@ -41,7 +43,8 @@ print("[Bootstrap] Created Remotes folder with", #remoteNames, "RemoteEvents")
 local Services = script.Parent.Services
 
 local serviceNames = {
-	"InventoryService",  -- must load before OreService so its module is cached
+	"InventoryService",  -- must load before OreService and EconomyService
+	"EconomyService",    -- handles SellOre; lazy-requires InventoryService
 	"OreService",
 	"MarketService",
 	"ContractService",
