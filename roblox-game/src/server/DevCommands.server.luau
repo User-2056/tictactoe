@@ -51,18 +51,16 @@ local function handleChat(player, msg)
 		local inv = IS.getInventory(player)
 		if not inv then return end
 
-		-- Temporarily expand capacity so the add always succeeds
 		local neededWeight = inv.currentWeight + OreConfig[oreType].Weight * n
-		local oldMax       = inv.maxWeight
-		if neededWeight > oldMax then
-			IS.setMaxWeight(player, neededWeight + 1)
-		end
-		IS.addOre(player, oreType, n)
-		if neededWeight > oldMax then
-			IS.setMaxWeight(player, oldMax)
+		if neededWeight > inv.maxWeight then
+			print(string.format("[DevCommands] ERROR: %d × %s would need %.0f kg but bag only has %.0f kg free (max %d kg)",
+				n, oreType, neededWeight - inv.currentWeight, inv.maxWeight - inv.currentWeight, inv.maxWeight))
+			return
 		end
 
-		print(string.format("[DevCommands] Gave %s %d × %s", player.Name, n, oreType))
+		IS.addOre(player, oreType, n)
+		print(string.format("[DevCommands] Gave %s %d × %s (%.0f / %d kg)",
+			player.Name, n, oreType, neededWeight, inv.maxWeight))
 		return
 	end
 end
