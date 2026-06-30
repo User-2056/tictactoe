@@ -19,6 +19,9 @@
       "Bootstrap": {
         "$path": "src/server/Bootstrap.server.luau"
       },
+      "DevCommands": {
+        "$path": "src/server/DevCommands.server.luau"
+      },
       "Services": {
         "$path": "src/server/Services"
       },
