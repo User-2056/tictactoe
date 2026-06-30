@@ -3,7 +3,7 @@
 --
 -- Commands:
 --   /credits <amount>          — add N credits to your balance
---   /ore <type> <amount>       — add N of a specific ore to your bag (bypasses weight cap)
+--   /ore <type> <amount>       — add N of a specific ore to your bag (errors if bag would overflow)
 
 local RunService        = game:GetService("RunService")
 local Players           = game:GetService("Players")

@@ -36,7 +36,15 @@ purchase better equipment, unlock new regions, and complete mining contracts.
   opens sell dialog (ore list + prices + grand total + Sell All button); server recalculates total
   from its own inventory on SellOre — no client value trusted; Credits label top-left of HUD;
   metallic coin-clink sell sound (rbxassetid://9125616843).
-- **Milestone 5 and beyond**: Not started.
+- **Milestone 5 (Equipment Shop) — COMPLETE**: EquipmentConfig populated (3 pickaxes, 4 backpacks);
+  EquipmentService tracks owned + equipped per player (ownership is permanent — players can switch
+  between owned items via Equip button); Frontier Mining Supplies kiosk in Workspace at (15, 4, −18)
+  with ProximityPrompt; ShopController two-column UI (pickaxes / backpacks) with Equipped/Equip/Buy
+  button states and "Owned" price label; real MiningPower (×1/×2/×4 base-25 damage) replaces hard-
+  coded value in OreService; real Capacity replaces hard-coded 100 kg in InventoryService; upgrade
+  toast + rupee chime on purchase; "no ores to sell" toast at sell kiosk when bag empty;
+  DevCommands Studio-only script: `/credits N` and `/ore <type> N` (respects bag capacity).
+- **Milestone 6 and beyond**: Not started.
 
 ---
 
@@ -60,12 +68,16 @@ purchase better equipment, unlock new regions, and complete mining contracts.
 - `ReplicatedStorage.Assets` — placeholder for models/sounds
 - `ServerScriptService.Systems` — placeholder for larger gameplay systems
 
+**Also declared in project.json (individual server scripts):**
+- `ServerScriptService.DevCommands` — Studio-only dev command script (`src/server/DevCommands.server.luau`)
+
 **Created at runtime by Bootstrap (not in project.json):**
-- `ReplicatedStorage.Remotes` — Folder containing all 14 RemoteEvents
+- `ReplicatedStorage.Remotes` — Folder containing all 16 RemoteEvents
 
 **Created via MCP (not Rojo-managed):**
 - `StarterGui.HUD`, `StarterGui.Shop`, `StarterGui.Market`, `StarterGui.Contracts`, `StarterGui.Settings`
 - `Workspace.AtlasOreExchange` — sell kiosk at (0, 3.5, −30) with ProximityPrompt
+- `Workspace.PickaxeShop` — equipment shop kiosk at (15, 4, −18), 10×8×2, with ProximityPrompt "ShopPrompt"
 
 **To start syncing:**
 1. Open terminal in `roblox-game/` and run: `rojo serve`
@@ -114,6 +126,8 @@ Clients fire RemoteEvents to request actions; server validates and responds.
 | `Inv_Full` | S→player | Bag is full; triggers red toast and hollow sound |
 | `Ore_HitBlocked` | S→player | Hit registered but no damage (inventory full) — payload: veinName |
 | `Eco_CreditsUpdate` | S→player | Credits balance changed — payload: balance (number) |
+| `Eq_Update` | S→player | Equipment snapshot — payload: pickaxeId, backpackId, ownedPickaxes[], ownedBackpacks[] |
+| `EquipItem` | C→S | Player equips an already-owned item — payload: itemType, itemId |
 
 ---
 
@@ -131,13 +145,14 @@ Clients fire RemoteEvents to request actions; server validates and responds.
 ### Server (`src/server/`)
 | File | Status | Purpose |
 |---|---|---|
-| `Bootstrap.server.luau` | ✅ M4 | Creates Remotes folder + 14 RemoteEvents, then requires all services |
-| `Services/OreService.luau` | ✅ M2 | Scans StarterMine, owns vein lifecycle, handles mining loop, awards ore |
-| `Services/InventoryService.luau` | ✅ M3 | Per-player ore inventory (100 kg cap); addOre, getInventory, clearInventory |
-| `Services/EconomyService.luau` | ✅ M4 | Per-player Credits balance; handles SellOre; server-recalculated totals |
+| `Bootstrap.server.luau` | ✅ M5 | Creates Remotes folder + 16 RemoteEvents, then requires all services |
+| `DevCommands.server.luau` | ✅ M5 | Studio-only: `/credits N`, `/ore <type> N` for Thxnderz_z only |
+| `Services/OreService.luau` | ✅ M5 | Mining loop; damage = EquipmentService.getMiningPower × 25 |
+| `Services/InventoryService.luau` | ✅ M5 | Per-player inventory; per-player maxWeight via setMaxWeight |
+| `Services/EconomyService.luau` | ✅ M4 | Per-player Credits balance; handles SellOre; deductCredits |
+| `Services/EquipmentService.luau` | ✅ M5 | Owned + equipped tracking; PurchaseEquipment + EquipItem handlers |
 | `Services/MarketService.luau` | skeleton | Will calculate seeded daily ore sell prices |
 | `Services/ContractService.luau` | skeleton | Will generate, track, and reward mining contracts |
-| `Services/EquipmentService.luau` | skeleton | Will validate and apply pickaxe/drill purchase upgrades |
 | `Services/RegionService.luau` | skeleton | Will track unlocked regions per player, handle licence purchase |
 | `Services/DataService.luau` | skeleton | Will save/load player data via DataStore with autosave |
 | `Data/DataService.server.luau` | ✅ M1 | Tests DataStore connection on startup; prints result to Output |
@@ -147,7 +162,8 @@ Clients fire RemoteEvents to request actions; server validates and responds.
 |---|---|---|
 | `Controllers/MiningController.client.luau` | ✅ M2 | Tool.Activated → MineOre; plays hit/break VFX + sounds; health bar visibility; ore popup |
 | `Controllers/InventoryController.client.luau` | ✅ M4 | Bag panel (weight bar + ore list); full toast; Credits label top-left of HUD |
-| `Controllers/SellController.client.luau` | ✅ M4 | Atlas Ore Exchange ProximityPrompt → sell dialog; Sell All fires SellOre |
+| `Controllers/SellController.client.luau` | ✅ M5 | Atlas Ore Exchange ProximityPrompt → sell dialog; Sell All; "no ores" toast |
+| `Controllers/ShopController.client.luau` | ✅ M5 | Frontier Mining Supplies ProximityPrompt → equipment shop; Equipped/Equip/Buy states |
 
 ### StarterGui (created via MCP, not file-backed)
 | Name | Will eventually contain |
