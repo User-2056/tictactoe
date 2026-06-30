@@ -2,7 +2,8 @@
 -- Responsibilities:
 --   * Detects pickaxe clicks on ore vein primaries AND their satellite children
 --   * Plays hit/break sounds; triggers dust particles
---   * Drives satellite cluster visuals: crack stages, break shrink/fade, respawn restore
+--   * Progressive satellite disintegration: pieces break off at HP thresholds,
+--     fly outward, and fade — remaining pieces crack and darken as damage accumulates
 --   * Shows/hides the per-vein health bar based on player distance
 --   * Shows a brief ore reward popup on vein break (once per break, no per-hit numbers)
 
@@ -24,41 +25,65 @@ local Ore_HitBlocked   = Remotes:WaitForChild("Ore_HitBlocked")
 
 local mineFolder = workspace:WaitForChild("StarterMine")
 
--- Veins that have taken at least one hit and not yet fully respawned.
--- Health bar is only shown for these when the player is nearby.
 local damagedVeins    = {}
 local HEALTH_BAR_RANGE = 22
 
--- Visual config for ore-piece satellites per ore type.
--- Rock-piece satellites always use Rock→Concrete→Slate material progression.
+-- Visual config for ore-piece satellites per ore type
 local SAT_ORE_CFG = {
-	stone = nil,  -- stone has no ore satellite pieces; plain rock only
+	stone = nil,
 	coal  = { Material = Enum.Material.Slate,         Color = Color3.fromRGB(28,  26,  28 ) },
 	iron  = { Material = Enum.Material.CorrodedMetal, Color = Color3.fromRGB(110, 70,  50 ) },
 	gold  = { Material = Enum.Material.Foil,          Color = Color3.fromRGB(220, 180, 30 ) },
 }
 
--- Original satellite sizes cached at load for restoring after break shrink animation
-local satOriginalSizes = {}  -- { [veinName] = { [childName] = Vector3 } }
+-- Which satellite piece breaks off at each health threshold, per ore type.
+-- Listed in descending threshold order (first entry triggers first).
+-- Thresholds are tuned to hit evenly-spaced hit counts for each ore's HP pool:
+--   stone (100 HP, 4 hits@MP1): Rock2 at hit 2
+--   coal  (150 HP, 6 hits@MP1): Ore2 at hit 2, Ore1 at hit 4
+--   iron  (250 HP, 10 hits@MP1): Ore2 at hit 3, Ore1 at hit 7
+--   gold  (500 HP, 20 hits@MP1): Ore3 at hit 6, Ore2 at hit 11, Ore1 at hit 16
+local BREAK_SCHEDULE = {
+	stone = {
+		{ name = "Rock2", threshold = 0.55 },
+	},
+	coal = {
+		{ name = "Ore2", threshold = 0.70 },
+		{ name = "Ore1", threshold = 0.35 },
+	},
+	iron = {
+		{ name = "Ore2", threshold = 0.70 },
+		{ name = "Ore1", threshold = 0.35 },
+	},
+	gold = {
+		{ name = "Ore3", threshold = 0.70 },
+		{ name = "Ore2", threshold = 0.45 },
+		{ name = "Ore1", threshold = 0.20 },
+	},
+}
+
+-- Pieces already broken off this life cycle; cleared on respawn
+local brokenPieces = {}  -- { ["VeinName-ChildName"] = true }
+
+-- Original satellite CFrames and sizes cached at load for restoring after break
+local satOriginalCFrames = {}  -- { [veinName] = { [childName] = CFrame } }
+local satOriginalSizes   = {}  -- { [veinName] = { [childName] = Vector3 } }
 
 -- ── Initialisation scan ───────────────────────────────────────────────────────
--- Runs before Play starts; caches satellite sizes and tightens the health bar.
 
 for _, part in ipairs(mineFolder:GetChildren()) do
 	if not (part:IsA("BasePart") and part:GetAttribute("OreType")) then continue end
 
-	local sizes = {}
+	local cframes, sizes = {}, {}
 	for _, child in ipairs(part:GetChildren()) do
 		if child:IsA("BasePart") then
-			sizes[child.Name] = child.Size
+			cframes[child.Name] = child.CFrame
+			sizes[child.Name]   = child.Size
 		end
 	end
-	satOriginalSizes[part.Name] = sizes
+	satOriginalCFrames[part.Name] = cframes
+	satOriginalSizes[part.Name]   = sizes
 
-	-- Override the health bar that OreService will create at runtime.
-	-- We shrink it and push it above the full cluster height, not just above the primary.
-	-- OreService creates the BillboardGui once and never re-sets its properties after that,
-	-- so this local override persists for the session.
 	local gui = part:FindFirstChild("VeinHealthBar")
 	if gui then
 		gui.Size        = UDim2.new(0, 64, 0, 7)
@@ -67,19 +92,14 @@ for _, part in ipairs(mineFolder:GetChildren()) do
 end
 
 -- ── Tool interaction ──────────────────────────────────────────────────────────
--- Roblox silences ClickDetectors when a Tool is equipped; clicks come through
--- Tool.Activated instead. Mouse.Target can be a satellite child of a vein, so we
--- walk up to the primary Part before firing the remote.
 
 local mouse = player:GetMouse()
 
 local function findVeinPart(target)
 	if not target then return nil end
-	-- Direct click on the primary vein part
 	if target.Parent == mineFolder and target:GetAttribute("OreType") then
 		return target
 	end
-	-- Click on a satellite that is a child of a primary vein part
 	local p = target.Parent
 	if p and p:IsA("BasePart") and p.Parent == mineFolder and p:GetAttribute("OreType") then
 		return p
@@ -109,18 +129,42 @@ local character = player.Character or player.CharacterAdded:Wait()
 onCharacterAdded(character)
 player.CharacterAdded:Connect(onCharacterAdded)
 
--- ── Satellite crack-stage helper ──────────────────────────────────────────────
--- Called on every hit. Rock-body satellites step through Rock→Concrete→Slate;
--- ore-piece satellites fade their colour toward grey as health drops.
--- Both changes are local-only; every client receives the same healthPct so they
--- stay in sync without any extra server involvement.
+-- ── Break-off animation ───────────────────────────────────────────────────────
+-- The piece flies radially away from the vein centre (direction derived from
+-- its offset relative to the primary), rises slightly, then fades out.
+-- Using the geometric direction makes the scatter deterministic — every client
+-- sees the same piece fly the same way, which looks correct in multiplayer.
 
-local function updateSatelliteCracks(part, healthPct)
+local function breakOffPiece(primaryPart, child)
+	child.CanCollide = false
+
+	-- Radial outward direction from the cluster centre
+	local offset = child.Position - primaryPart.Position
+	local dir    = offset.Magnitude > 0.5 and offset.Unit or Vector3.new(1, 0, 0)
+
+	-- Fly 3 studs outward + 2 studs up, shrink to 20 % of original size
+	local targetCF   = CFrame.new(child.Position + dir * 3 + Vector3.new(0, 2, 0))
+		* (child.CFrame - child.CFrame.Position)  -- preserve orientation
+	local targetSize = child.Size * 0.2
+
+	TweenService:Create(
+		child,
+		TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ CFrame = targetCF, Size = targetSize, Transparency = 1 }
+	):Play()
+end
+
+-- ── Satellite crack-stage helper ──────────────────────────────────────────────
+-- Only updates satellites that have NOT already broken off.
+
+local function updateSatelliteCracks(veinName, part, healthPct)
 	local oreType = part:GetAttribute("OreType")
 	local satCfg  = oreType and SAT_ORE_CFG[oreType]
 
 	for _, child in ipairs(part:GetChildren()) do
 		if not child:IsA("BasePart") then continue end
+		if brokenPieces[veinName .. "-" .. child.Name] then continue end
+
 		local role = child:GetAttribute("Role")
 
 		if role == "rock" then
@@ -164,12 +208,28 @@ Ore_VeinHit.OnClientEvent:Connect(function(veinName, healthPct)
 	local sound = part:FindFirstChild("HitSound")
 	if sound then sound:Play() end
 
-	updateSatelliteCracks(part, healthPct)
+	-- Progressive satellite disintegration: break off pieces at HP thresholds
+	local oreType  = part:GetAttribute("OreType")
+	local schedule = oreType and BREAK_SCHEDULE[oreType]
+	if schedule then
+		for _, entry in ipairs(schedule) do
+			local key = veinName .. "-" .. entry.name
+			if not brokenPieces[key] and healthPct <= entry.threshold then
+				brokenPieces[key] = true
+				local piece = part:FindFirstChild(entry.name)
+				if piece and piece:IsA("BasePart") then
+					breakOffPiece(part, piece)
+				end
+			end
+		end
+	end
+
+	-- Update crack stages on pieces that are still present
+	updateSatelliteCracks(veinName, part, healthPct)
 end)
 
 -- ── Break effect ──────────────────────────────────────────────────────────────
--- Larger dust burst, then satellite parts shrink and fade with a slight suck-in
--- (Back.In easing) rather than an instant pop — reads as more satisfying.
+-- Larger dust burst; remaining (not yet broken-off) satellites shrink and fade.
 
 Ore_VeinBroke.OnClientEvent:Connect(function(veinName)
 	damagedVeins[veinName] = nil
@@ -183,34 +243,43 @@ Ore_VeinBroke.OnClientEvent:Connect(function(veinName)
 	if sound then sound:Play() end
 
 	for _, child in ipairs(part:GetChildren()) do
-		if child:IsA("BasePart") then
-			child.CanCollide = false
-			TweenService:Create(
-				child,
-				TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-				{ Size = Vector3.new(0.05, 0.05, 0.05), Transparency = 1 }
-			):Play()
-		end
+		if not child:IsA("BasePart") then continue end
+		local key = veinName .. "-" .. child.Name
+		if brokenPieces[key] then continue end  -- already gone; skip
+		child.CanCollide = false
+		TweenService:Create(
+			child,
+			TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+			{ Size = Vector3.new(0.05, 0.05, 0.05), Transparency = 1 }
+		):Play()
 	end
 end)
 
 -- ── Respawn ───────────────────────────────────────────────────────────────────
--- Restores satellite sizes, visibility, material, and colour for the new ore type.
--- OreService already restores the primary Part's colour/material server-side.
 
 Ore_VeinSpawned.OnClientEvent:Connect(function(veinName, newOreType)
 	damagedVeins[veinName] = nil
+
+	-- Clear break-off state for this vein so pieces trigger again next life
+	for key in pairs(brokenPieces) do
+		if key:sub(1, #veinName + 1) == veinName .. "-" then
+			brokenPieces[key] = nil
+		end
+	end
+
 	local part = mineFolder:FindFirstChild(veinName)
 	if not part then return end
 
-	local satCfg    = SAT_ORE_CFG[newOreType]
-	local origSizes = satOriginalSizes[veinName] or {}
+	local satCfg     = SAT_ORE_CFG[newOreType]
+	local origCF     = satOriginalCFrames[veinName] or {}
+	local origSizes  = satOriginalSizes[veinName]   or {}
 
 	for _, child in ipairs(part:GetChildren()) do
 		if not child:IsA("BasePart") then continue end
 
-		local orig = origSizes[child.Name]
-		if orig then child.Size = orig end
+		-- Restore to original world CFrame and size (undoes fly-away tweens)
+		if origCF[child.Name]    then child.CFrame = origCF[child.Name]    end
+		if origSizes[child.Name] then child.Size   = origSizes[child.Name] end
 		child.Transparency = 0
 
 		local role = child:GetAttribute("Role")
@@ -246,7 +315,6 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- ── Ore reward popup ──────────────────────────────────────────────────────────
--- Fired once per break (not per hit). Small, non-flashy text above centre screen.
 
 Ore_OreAwarded.OnClientEvent:Connect(function(oreType, amount)
 	local hud = playerGui:FindFirstChild("HUD")
