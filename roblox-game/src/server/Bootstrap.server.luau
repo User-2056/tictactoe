@@ -1,25 +1,28 @@
--- Bootstrap: This is the first server script that runs when the game starts.
--- It does two things:
---   1. Creates a "Remotes" folder in ReplicatedStorage and puts all RemoteEvents
---      inside it. RemoteEvents are how the client and server talk to each other
---      securely — the server creates them so clients cannot cheat.
---   2. Loads every service module so each one runs its startup code and prints
---      its name to the Output window, confirming everything loaded correctly.
+-- Bootstrap: First server script to run. Creates all RemoteEvents, then loads services.
+-- RemoteEvents are split into two directions:
+--   C->S  client fires to request an action   (MineOre, SellOre, …)
+--   S->C  server fires to push state/effects  (Ore_VeinHit, Ore_VeinBroke, …)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Step 1: Create the Remotes folder with all RemoteEvents
 local Remotes = Instance.new("Folder")
 Remotes.Name = "Remotes"
 Remotes.Parent = ReplicatedStorage
 
 local remoteNames = {
+	-- Client -> Server requests
 	"MineOre",
 	"SellOre",
 	"PurchaseEquipment",
 	"AcceptContract",
 	"UnlockLicence",
 	"CollectDrillOutput",
+	-- Server -> All clients  (mining feedback)
+	"Ore_VeinHit",      -- payload: veinName, healthPct (0-1)
+	"Ore_VeinBroke",    -- payload: veinName
+	"Ore_VeinSpawned",  -- payload: veinName, newOreType
+	-- Server -> Mining player only
+	"Ore_OreAwarded",   -- payload: oreType, amount
 }
 
 for _, name in ipairs(remoteNames) do
@@ -30,7 +33,6 @@ end
 
 print("[Bootstrap] Created Remotes folder with", #remoteNames, "RemoteEvents")
 
--- Step 2: Load every service (each service prints its own name below)
 local Services = script.Parent.Services
 
 local serviceNames = {
