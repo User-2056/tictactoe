@@ -442,8 +442,8 @@ local shopKiosk = workspace:WaitForChild("PickaxeShop", 10)
 if shopKiosk then
 	local prompt = shopKiosk:WaitForChild("ShopPrompt", 5)
 	if prompt then
-		prompt.Triggered:Connect(function(triggeringPlayer)
-			if triggeringPlayer == player then openShop() end
+		prompt.Triggered:Connect(function()
+			openShop()
 		end)
 	else
 		warn("[ShopController] ShopPrompt not found on PickaxeShop")
