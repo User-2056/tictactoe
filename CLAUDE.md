@@ -28,7 +28,15 @@ purchase better equipment, unlock new regions, and complete mining contracts.
   health bar → break → award → respawn); Pickaxe Tool in StarterPack (MINING_POWER=25, Tier 1);
   hit/break sounds + dust particles fire to all clients; ore reward popup on break;
   no per-hit damage numbers; server-authoritative throughout.
-- **Milestone 3 and beyond**: Not started.
+- **Milestone 3 (Inventory System) — COMPLETE**: InventoryService with weight-based capacity (100 kg);
+  per-player server-authoritative inventory; HUD bag panel (weight bar + ore list); blocked-hit
+  feedback when full (hollow sound + Inv_Full red toast + HP bar visible but no damage applied).
+- **Milestone 4 (Selling & Credits) — COMPLETE**: EconomyService with per-player Credits balance;
+  Atlas Ore Exchange kiosk in Workspace at (0, 3.5, −30) with ProximityPrompt; SellController
+  opens sell dialog (ore list + prices + grand total + Sell All button); server recalculates total
+  from its own inventory on SellOre — no client value trusted; Credits label top-left of HUD;
+  metallic coin-clink sell sound (rbxassetid://9125616843).
+- **Milestone 5 and beyond**: Not started.
 
 ---
 
@@ -53,10 +61,11 @@ purchase better equipment, unlock new regions, and complete mining contracts.
 - `ServerScriptService.Systems` — placeholder for larger gameplay systems
 
 **Created at runtime by Bootstrap (not in project.json):**
-- `ReplicatedStorage.Remotes` — Folder containing all 6 RemoteEvents
+- `ReplicatedStorage.Remotes` — Folder containing all 14 RemoteEvents
 
 **Created via MCP (not Rojo-managed):**
 - `StarterGui.HUD`, `StarterGui.Shop`, `StarterGui.Market`, `StarterGui.Contracts`, `StarterGui.Settings`
+- `Workspace.AtlasOreExchange` — sell kiosk at (0, 3.5, −30) with ProximityPrompt
 
 **To start syncing:**
 1. Open terminal in `roblox-game/` and run: `rojo serve`
@@ -101,6 +110,10 @@ Clients fire RemoteEvents to request actions; server validates and responds.
 | `Ore_VeinBroke` | S→all | Vein destroyed — payload: veinName |
 | `Ore_VeinSpawned` | S→all | Vein respawned — payload: veinName, newOreType |
 | `Ore_OreAwarded` | S→miner | Ore awarded to mining player — payload: oreType, amount |
+| `Inv_Update` | S→player | Inventory snapshot — payload: items, currentWeight, maxWeight |
+| `Inv_Full` | S→player | Bag is full; triggers red toast and hollow sound |
+| `Ore_HitBlocked` | S→player | Hit registered but no damage (inventory full) — payload: veinName |
+| `Eco_CreditsUpdate` | S→player | Credits balance changed — payload: balance (number) |
 
 ---
 
@@ -118,9 +131,10 @@ Clients fire RemoteEvents to request actions; server validates and responds.
 ### Server (`src/server/`)
 | File | Status | Purpose |
 |---|---|---|
-| `Bootstrap.server.luau` | ✅ M1 | Creates Remotes folder + 10 RemoteEvents, then requires all services |
+| `Bootstrap.server.luau` | ✅ M4 | Creates Remotes folder + 14 RemoteEvents, then requires all services |
 | `Services/OreService.luau` | ✅ M2 | Scans StarterMine, owns vein lifecycle, handles mining loop, awards ore |
-| `Services/InventoryService.luau` | skeleton | Will manage per-player ore inventory and bag capacity |
+| `Services/InventoryService.luau` | ✅ M3 | Per-player ore inventory (100 kg cap); addOre, getInventory, clearInventory |
+| `Services/EconomyService.luau` | ✅ M4 | Per-player Credits balance; handles SellOre; server-recalculated totals |
 | `Services/MarketService.luau` | skeleton | Will calculate seeded daily ore sell prices |
 | `Services/ContractService.luau` | skeleton | Will generate, track, and reward mining contracts |
 | `Services/EquipmentService.luau` | skeleton | Will validate and apply pickaxe/drill purchase upgrades |
@@ -132,7 +146,8 @@ Clients fire RemoteEvents to request actions; server validates and responds.
 | File | Status | Purpose |
 |---|---|---|
 | `Controllers/MiningController.client.luau` | ✅ M2 | Tool.Activated → MineOre; plays hit/break VFX + sounds; health bar visibility; ore popup |
-| `Controllers/InventoryController.client.luau` | skeleton | Will display ore inventory and bag capacity on the HUD |
+| `Controllers/InventoryController.client.luau` | ✅ M4 | Bag panel (weight bar + ore list); full toast; Credits label top-left of HUD |
+| `Controllers/SellController.client.luau` | ✅ M4 | Atlas Ore Exchange ProximityPrompt → sell dialog; Sell All fires SellOre |
 
 ### StarterGui (created via MCP, not file-backed)
 | Name | Will eventually contain |
