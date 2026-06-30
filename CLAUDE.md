@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Guidance for Claude Code when working in this repository.
-Auto-updated at end of every session. Last updated: 2026-06-30.
+Auto-updated at end of every session. Last updated: 2026-06-30 (post-M5 visual pass).
 
 ---
 
@@ -44,6 +44,18 @@ purchase better equipment, unlock new regions, and complete mining contracts.
   coded value in OreService; real Capacity replaces hard-coded 100 kg in InventoryService; upgrade
   toast + rupee chime on purchase; "no ores to sell" toast at sell kiosk when bag empty;
   DevCommands Studio-only script: `/credits N` and `/ore <type> N` (respects bag capacity).
+- **Visual Pass (Ore Vein Clusters) — COMPLETE**: All 14 ore nodes in `Workspace.StarterMine`
+  replaced from plain coloured cubes to multi-part rock clusters. Each primary `BasePart` (still
+  owned by OreService) gains satellite children: rock body pieces (`Rock` material, grey) that
+  partially embed into the cave floor, plus ore-specific pieces (Slate/CorrodedMetal/Foil for
+  coal/iron/gold). MiningController drives all satellite visuals client-side without touching
+  OreService: crack stages (`Rock→Concrete→Slate` at 66%/33% HP on rock satellites, colour fade
+  on ore satellites); progressive break-off (peripheral pieces fly radially outward at ore-specific
+  HP thresholds — e.g. gold loses 3 pieces at hits 6, 11, 16 of 20); final break uses Back.In
+  suck-in tween on remaining pieces; respawn restores all CFrames, sizes, materials. Health bar
+  shrunk to 64×7 px, StudsOffset lifted to 3.8 studs above cluster. Gold veins have PointLight
+  (amber, range 14) managed by OreService. Clicks on satellite children now correctly route to
+  the parent vein. No OreService changes — purely a visual layer.
 - **Milestone 6 and beyond**: Not started.
 
 ---
@@ -78,6 +90,14 @@ purchase better equipment, unlock new regions, and complete mining contracts.
 - `StarterGui.HUD`, `StarterGui.Shop`, `StarterGui.Market`, `StarterGui.Contracts`, `StarterGui.Settings`
 - `Workspace.AtlasOreExchange` — sell kiosk at (0, 3.5, −30) with ProximityPrompt
 - `Workspace.PickaxeShop` — equipment shop kiosk at (15, 4, −18), 10×8×2, with ProximityPrompt "ShopPrompt"
+- `Workspace.StarterMine` — cave folder (floor Y=0, ceiling Y=14, walls X=±42, back wall Z=−116)
+  containing 14 ore node `BasePart`s with satellite cluster children:
+  - stone ×5: primary + 2 rock satellites, no ore pieces
+  - coal ×4: primary + 1 rock satellite + 2 Slate ore pieces
+  - iron ×3: primary + 1 rock satellite + 2 CorrodedMetal ore pieces
+  - gold ×2: primary + 1 rock satellite + 3 Foil ore pieces + PointLight
+  Rock satellites have `Role="rock"` attribute; ore pieces have `Role="ore"`. All satellites are
+  Anchored children of the primary Part (OreService only ever touches the primary).
 
 **To start syncing:**
 1. Open terminal in `roblox-game/` and run: `rojo serve`
@@ -137,7 +157,7 @@ Clients fire RemoteEvents to request actions; server validates and responds.
 | File | Status | Contains |
 |---|---|---|
 | `OreConfig.luau` | ✅ M2 | Stone/Coal/Iron/Gold — BaseValue, Weight, SpawnChance, VeinHP, RespawnSeconds, Color |
-| `EquipmentConfig.luau` | skeleton | Pickaxe/drill tiers, costs, mining speed multipliers |
+| `EquipmentConfig.luau` | ✅ M5 | 3 pickaxes (MP×1/2/4, ₡0/2500/25000) + 4 backpacks (100–1000 kg, ₡0–35000) |
 | `RegionConfig.luau` | skeleton | Region names, unlock costs, available ore types per region |
 | `ContractConfig.luau` | skeleton | Contract templates (target ore, quantity, reward) |
 | `MarketConfig.luau` | skeleton | Daily price multiplier bounds per ore type |
@@ -160,7 +180,7 @@ Clients fire RemoteEvents to request actions; server validates and responds.
 ### Client (`src/client/`)
 | File | Status | Purpose |
 |---|---|---|
-| `Controllers/MiningController.client.luau` | ✅ M2 | Tool.Activated → MineOre; plays hit/break VFX + sounds; health bar visibility; ore popup |
+| `Controllers/MiningController.client.luau` | ✅ VP | Tool.Activated → MineOre (satellite-click-aware); crack stages + progressive piece break-off; break/respawn animations; health bar; ore popup |
 | `Controllers/InventoryController.client.luau` | ✅ M4 | Bag panel (weight bar + ore list); full toast; Credits label top-left of HUD |
 | `Controllers/SellController.client.luau` | ✅ M5 | Atlas Ore Exchange ProximityPrompt → sell dialog; Sell All; "no ores" toast |
 | `Controllers/ShopController.client.luau` | ✅ M5 | Frontier Mining Supplies ProximityPrompt → equipment shop; Equipped/Equip/Buy states |
@@ -176,27 +196,43 @@ Clients fire RemoteEvents to request actions; server validates and responds.
 
 ---
 
-## How to Verify Milestone 1
+## How to Verify Current State (post-M5 + Visual Pass)
 
 1. `rojo serve` in `roblox-game/`, connect in Studio
 2. Press Play
-3. Output window should show (in order):
+3. Output window should include (server side, in roughly this order):
    ```
-   [Bootstrap] Created Remotes folder with 6 RemoteEvents
-   [OreService] Loaded
+   [Bootstrap] Created Remotes folder with 16 RemoteEvents
    [InventoryService] Loaded
+   [EquipmentService] Loaded
+   [EconomyService] Loaded
+   [OreService] Loaded — 14 veins registered
    [MarketService] Loaded
    [ContractService] Loaded
-   [EquipmentService] Loaded
    [RegionService] Loaded
    [DataService] Loaded
    [Bootstrap] All services loaded — Mining Corporation server is ready!
+   [DevCommands] Loaded (Studio only) — /credits <n>  |  /ore <type> <n>
+   ```
+   And on the client side:
+   ```
    [MiningController] Loaded
    [InventoryController] Loaded
+   [SellController] Loaded
+   [ShopController] Loaded
    [DataService] DataStore connection confirmed — PlayerData_v1 is accessible.
    ```
-4. In the Explorer panel, confirm `ReplicatedStorage.Remotes` contains 6 RemoteEvents
+4. In the Explorer panel, confirm `ReplicatedStorage.Remotes` contains **16** RemoteEvents
 5. In `StarterGui`, confirm HUD, Shop, Market, Contracts, Settings ScreenGuis exist
+6. In `Workspace.StarterMine`, confirm ore nodes have Rock/Ore satellite children visible in Explorer
+7. Pick up the Pickaxe from StarterPack and mine an ore node — you should see:
+   - Satellite pieces crack (material changes) as health drops
+   - Peripheral pieces fly outward at HP thresholds (e.g. coal Ore2 breaks on 2nd hit)
+   - Dust particles and hit sound on each swing
+   - Health bar appears above the cluster when you're within range
+   - "+1 Coal" (or equivalent) popup on break
+8. Walk to the Atlas Ore Exchange kiosk (at Z=−30) and sell ore
+9. Walk to the Frontier Mining Supplies kiosk (near X=15) and browse the equipment shop
 
 **If DataStore prints a warning instead:** Go to Game Settings → Security → tick
 "Enable Studio Access to API Services", then Play again.
