@@ -304,7 +304,7 @@ local function makeItemCard(parent, itemType, item, order)
 		end
 	end)
 
-	table.insert(itemEntries, { btn = btn, itemType = itemType, item = item })
+	table.insert(itemEntries, { btn = btn, priceLabel = priceLabel, itemType = itemType, item = item })
 end
 
 -- Build all cards
@@ -315,9 +315,10 @@ for i, b in ipairs(EquipmentConfig.Backpacks) do makeItemCard(backpackList, "bac
 
 local function refreshButtons()
 	for _, entry in ipairs(itemEntries) do
-		local btn  = entry.btn
-		local kind = entry.itemType
-		local item = entry.item
+		local btn        = entry.btn
+		local priceLabel = entry.priceLabel
+		local kind       = entry.itemType
+		local item       = entry.item
 
 		local isEquipped = (kind == "pickaxe"  and equippedPickaxeId  == item.Id)
 		               or  (kind == "backpack" and equippedBackpackId == item.Id)
@@ -325,6 +326,16 @@ local function refreshButtons()
 		               or  (kind == "backpack" and ownedBackpacks[item.Id])
 		local canAfford  = cachedBalance >= item.Cost
 
+		-- Price label: show "Owned" once purchased, price otherwise
+		if isOwned or item.Cost <= 0 then
+			priceLabel.Text      = "Owned"
+			priceLabel.TextColor3 = Color3.fromRGB(120, 120, 140)
+		else
+			priceLabel.Text      = "₡" .. fmtNum(item.Cost)
+			priceLabel.TextColor3 = canAfford and Color3.fromRGB(215, 175, 30) or Color3.fromRGB(130, 130, 145)
+		end
+
+		-- Button
 		if isEquipped then
 			btn.Text             = "Equipped"
 			btn.BackgroundColor3 = Color3.fromRGB(45, 155, 75)
@@ -341,7 +352,7 @@ local function refreshButtons()
 			btn.TextColor3       = Color3.fromRGB(255, 255, 255)
 			btn.AutoButtonColor  = true
 		else
-			btn.Text             = "₡" .. fmtNum(item.Cost)
+			btn.Text             = "Buy"
 			btn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 			btn.TextColor3       = Color3.fromRGB(130, 130, 145)
 			btn.AutoButtonColor  = false
