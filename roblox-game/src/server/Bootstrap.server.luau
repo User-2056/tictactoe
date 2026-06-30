@@ -30,6 +30,8 @@ local remoteNames = {
 	"Ore_HitBlocked",   -- payload: veinName; inventory full, hit did no damage
 	-- Server -> Owning player only  (economy)
 	"Eco_CreditsUpdate", -- payload: balance (number)
+	-- Server -> Owning player only  (equipment)
+	"Eq_Update",         -- payload: pickaxeId (string), backpackId (string)
 }
 
 for _, name in ipairs(remoteNames) do
@@ -43,12 +45,12 @@ print("[Bootstrap] Created Remotes folder with", #remoteNames, "RemoteEvents")
 local Services = script.Parent.Services
 
 local serviceNames = {
-	"InventoryService",  -- must load before OreService and EconomyService
-	"EconomyService",    -- handles SellOre; lazy-requires InventoryService
-	"OreService",
+	"InventoryService",  -- no lazy deps; must load first
+	"EquipmentService",  -- lazy-requires Economy + Inventory; OreService needs it per-request
+	"EconomyService",    -- lazy-requires Inventory
+	"OreService",        -- lazy-requires Inventory + Equipment
 	"MarketService",
 	"ContractService",
-	"EquipmentService",
 	"RegionService",
 	"DataService",
 }

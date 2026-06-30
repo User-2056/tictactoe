@@ -10,10 +10,10 @@ local StarterPack       = game:GetService("StarterPack")
 local OreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("OreConfig"))
 local Remotes   = ReplicatedStorage:WaitForChild("Remotes")
 
-local MINE_FOLDER   = "StarterMine"
-local MINING_POWER  = 25   -- Tier 1 pickaxe damage per swing; full system in Milestone 5
-local MINING_RANGE  = 12   -- studs; server validates this on every request
-local PICKAXE_NAME  = "Pickaxe"
+local MINE_FOLDER        = "StarterMine"
+local BASE_DAMAGE        = 25   -- damage per swing at MiningPower=1; multiplied by player's tier
+local MINING_RANGE       = 12   -- studs; server validates this on every request
+local PICKAXE_NAME       = "Pickaxe"
 
 -- keyed by Part.Name  →  { part, oreType, currentHP, maxHP, active }
 local veins = {}
@@ -245,9 +245,13 @@ local function respawnVein(veinState)
 	print(string.format("[OreService] Vein %s respawned as %s", part.Name, newOreType))
 end
 
--- Lazy-require so load order in Bootstrap doesn't matter
+-- Lazy-requires so load order in Bootstrap doesn't matter
 local function getInventoryService()
 	return require(script.Parent.InventoryService)
+end
+
+local function getEquipmentService()
+	return require(script.Parent.EquipmentService)
 end
 
 local function awardOre(player, oreType, amount)
@@ -291,8 +295,9 @@ local function onMineOre(player, veinName)
 		end
 	end
 
-	-- Apply damage
-	veinState.currentHP = math.max(0, veinState.currentHP - MINING_POWER)
+	-- Apply damage scaled by the player's equipped pickaxe tier
+	local damage = getEquipmentService().getMiningPower(player) * BASE_DAMAGE
+	veinState.currentHP = math.max(0, veinState.currentHP - damage)
 	local healthPct = veinState.currentHP / veinState.maxHP
 
 	-- Update crack visuals on server (replicate to all clients automatically)
@@ -313,10 +318,9 @@ local function onMineOre(player, veinName)
 		local light = veinState.part:FindFirstChildOfClass("PointLight")
 		if light then light.Enabled = false end
 
-		awardOre(player, veinState.oreType, 1)
+		awardOre(player, veinState.oreType, 1)  -- also fires Ore_OreAwarded internally
 
 		Remotes.Ore_VeinBroke:FireAllClients(veinName)
-		Remotes.Ore_OreAwarded:FireClient(player, veinState.oreType, 1)
 
 		local respawnTime = OreConfig[veinState.oreType].RespawnSeconds
 		task.delay(respawnTime, function() respawnVein(veinState) end)

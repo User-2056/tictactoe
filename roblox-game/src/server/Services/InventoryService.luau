@@ -11,7 +11,7 @@ local Remotes    = ReplicatedStorage:WaitForChild("Remotes")
 local Inv_Update = Remotes:WaitForChild("Inv_Update")
 local Inv_Full   = Remotes:WaitForChild("Inv_Full")
 
-local MAX_WEIGHT = 100  -- Starter Backpack capacity in kg
+local STARTER_CAPACITY = 100  -- default until EquipmentService upgrades the backpack
 
 -- keyed by Player →  { items = { [oreType] = qty }, currentWeight, maxWeight }
 local inventories = {}
@@ -32,7 +32,7 @@ local function initPlayer(player)
 	inventories[player] = {
 		items         = {},
 		currentWeight = 0,
-		maxWeight     = MAX_WEIGHT,
+		maxWeight     = STARTER_CAPACITY,
 	}
 	pushUpdate(player)
 end
@@ -77,6 +77,14 @@ function InventoryService.clearInventory(player)
 	if not inv then return end
 	inv.items         = {}
 	inv.currentWeight = 0
+	pushUpdate(player)
+end
+
+-- Updates the player's bag capacity; called by EquipmentService on backpack upgrade.
+function InventoryService.setMaxWeight(player, capacity)
+	local inv = inventories[player]
+	if not inv then return end
+	inv.maxWeight = capacity
 	pushUpdate(player)
 end
 

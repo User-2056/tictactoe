@@ -39,6 +39,12 @@ function EconomyService.getBalance(player)
 	return balances[player] or 0
 end
 
+function EconomyService.deductCredits(player, amount)
+	if amount <= 0 then return end
+	balances[player] = math.max(0, (balances[player] or 0) - amount)
+	pushUpdate(player)
+end
+
 -- ── SellOre handler ─────────────────────────────────────────────────────────
 -- Two modes:
 --   SellOre:FireServer()             → sell all (no args)
