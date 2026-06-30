@@ -21,9 +21,9 @@ return {
 	coal = {
 		BaseValue      = 12,
 		Weight         = 2,
-		SpawnChance    = 0.28,
+		SpawnChance    = 0.25,
 		VeinHP         = 150,
-		RespawnSeconds = 40,
+		RespawnSeconds = 30,
 		Color          = Color3.fromRGB(57, 52, 57),
 	},
 	iron = {
@@ -31,15 +31,15 @@ return {
 		Weight         = 3,
 		SpawnChance    = 0.14,
 		VeinHP         = 250,
-		RespawnSeconds = 60,
+		RespawnSeconds = 30,
 		Color          = Color3.fromRGB(150, 100, 80),
 	},
 	gold = {
 		BaseValue      = 90,
 		Weight         = 5,
-		SpawnChance    = 0.03,
+		SpawnChance    = 0.06,
 		VeinHP         = 500,
-		RespawnSeconds = 120,
+		RespawnSeconds = 30,
 		Color          = Color3.fromRGB(215, 175, 30),
 	},
 }
