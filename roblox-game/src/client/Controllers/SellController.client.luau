@@ -321,7 +321,7 @@ local pickerOreType = nil
 local pickerMaxQty  = 0
 
 local function getParsedQty()
-	local n = tonumber(qtyBox.Text:gsub("[^%d]", "")) or 0
+	local n = tonumber((qtyBox.Text:gsub("[^%d]", ""))) or 0
 	return math.min(math.max(0, n), pickerMaxQty)
 end
 
