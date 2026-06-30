@@ -65,6 +65,9 @@ local BREAK_SCHEDULE = {
 -- Pieces already broken off this life cycle; cleared on respawn
 local brokenPieces = {}  -- { ["VeinName-ChildName"] = true }
 
+-- Active tweens keyed by satellite instance; stored to allow explicit cancellation
+local activeTweens = {}  -- { [BasePart] = Tween }
+
 -- Original satellite CFrames and sizes cached at load for restoring after break
 local satOriginalCFrames = {}  -- { [veinName] = { [childName] = CFrame } }
 local satOriginalSizes   = {}  -- { [veinName] = { [childName] = Vector3 } }
@@ -147,11 +150,13 @@ local function breakOffPiece(primaryPart, child)
 		* (child.CFrame - child.CFrame.Position)  -- preserve orientation
 	local targetSize = child.Size * 0.2
 
-	TweenService:Create(
+	local t = TweenService:Create(
 		child,
 		TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 		{ CFrame = targetCF, Size = targetSize, Transparency = 1 }
-	):Play()
+	)
+	activeTweens[child] = t
+	t:Play()
 end
 
 -- ── Satellite crack-stage helper ──────────────────────────────────────────────
@@ -247,11 +252,13 @@ Ore_VeinBroke.OnClientEvent:Connect(function(veinName)
 		local key = veinName .. "-" .. child.Name
 		if brokenPieces[key] then continue end  -- already gone; skip
 		child.CanCollide = false
-		TweenService:Create(
+		local t = TweenService:Create(
 			child,
 			TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.In),
 			{ Size = Vector3.new(0.05, 0.05, 0.05), Transparency = 1 }
-		):Play()
+		)
+		activeTweens[child] = t
+		t:Play()
 	end
 end)
 
@@ -267,15 +274,25 @@ Ore_VeinSpawned.OnClientEvent:Connect(function(veinName, newOreType)
 		end
 	end
 
+	-- Yield one frame so any pending server-side property replication settles
+	-- before we overwrite satellite properties client-side.
+	task.wait(0)
+
 	local part = mineFolder:FindFirstChild(veinName)
 	if not part then return end
 
-	local satCfg     = SAT_ORE_CFG[newOreType]
-	local origCF     = satOriginalCFrames[veinName] or {}
-	local origSizes  = satOriginalSizes[veinName]   or {}
+	local satCfg    = SAT_ORE_CFG[newOreType]
+	local origCF    = satOriginalCFrames[veinName] or {}
+	local origSizes = satOriginalSizes[veinName]   or {}
 
 	for _, child in ipairs(part:GetChildren()) do
 		if not child:IsA("BasePart") then continue end
+
+		-- Cancel any in-progress tween on this satellite before restoring
+		if activeTweens[child] then
+			activeTweens[child]:Cancel()
+			activeTweens[child] = nil
+		end
 
 		-- Restore to original world CFrame and size (undoes fly-away tweens)
 		if origCF[child.Name]    then child.CFrame = origCF[child.Name]    end
