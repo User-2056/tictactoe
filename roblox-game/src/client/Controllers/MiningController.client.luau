@@ -78,14 +78,17 @@ for _, part in ipairs(mineFolder:GetChildren()) do
 	if not (part:IsA("BasePart") and part:GetAttribute("OreType")) then continue end
 
 	local cframes, sizes = {}, {}
+	local satCount = 0
 	for _, child in ipairs(part:GetChildren()) do
 		if child:IsA("BasePart") then
 			cframes[child.Name] = child.CFrame
 			sizes[child.Name]   = child.Size
+			satCount += 1
 		end
 	end
 	satOriginalCFrames[part.Name] = cframes
 	satOriginalSizes[part.Name]   = sizes
+	print(string.format("[MiningController] Init: %s → %d satellites cached", part.Name, satCount))
 
 	local gui = part:FindFirstChild("VeinHealthBar")
 	if gui then
@@ -279,11 +282,18 @@ Ore_VeinSpawned.OnClientEvent:Connect(function(veinName, newOreType)
 	task.wait(0)
 
 	local part = mineFolder:FindFirstChild(veinName)
-	if not part then return end
+	if not part then
+		warn("[MiningController] Respawn: part not found for", veinName)
+		return
+	end
 
 	local satCfg    = SAT_ORE_CFG[newOreType]
 	local origCF    = satOriginalCFrames[veinName] or {}
 	local origSizes = satOriginalSizes[veinName]   or {}
+	local restored  = 0
+
+	print(string.format("[MiningController] Respawn %s → %s | origCF keys: %d",
+		veinName, newOreType, #(function() local t={} for k in pairs(origCF) do t[#t+1]=k end return t end)()))
 
 	for _, child in ipairs(part:GetChildren()) do
 		if not child:IsA("BasePart") then continue end
@@ -309,7 +319,10 @@ Ore_VeinSpawned.OnClientEvent:Connect(function(veinName, newOreType)
 			child.Color      = satCfg and satCfg.Color    or Color3.fromRGB(140, 135, 128)
 			child.CanCollide = false
 		end
+		restored += 1
+		print(string.format("  [MC] restored %s (role=%s sz=%s t=%.2f)", child.Name, tostring(role), tostring(child.Size), child.Transparency))
 	end
+	print(string.format("[MiningController] Respawn done: %d parts restored for %s", restored, veinName))
 end)
 
 -- ── Distance-based health bar visibility ──────────────────────────────────────
