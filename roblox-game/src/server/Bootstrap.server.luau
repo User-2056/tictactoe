@@ -26,6 +26,8 @@ local remoteNames = {
 	-- Server -> Owning player only  (inventory)
 	"Inv_Update",       -- payload: items (table), currentWeight, maxWeight
 	"Inv_Full",         -- no payload; triggers the "bag full" notification
+	-- Server -> Mining player only  (blocked hit feedback)
+	"Ore_HitBlocked",   -- payload: veinName; inventory full, hit did no damage
 }
 
 for _, name in ipairs(remoteNames) do

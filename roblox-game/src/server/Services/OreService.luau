@@ -172,6 +172,14 @@ local function addEffects(part)
 	brk.Volume              = 0.8
 	brk.RollOffMaxDistance  = 45
 	brk.Parent              = part
+
+	-- Hollow/blocked sound — played when the player hits but inventory is full (1.0s — ProSoundEffects)
+	local hollow            = Instance.new("Sound")
+	hollow.Name             = "HollowSound"
+	hollow.SoundId          = "rbxassetid://9113437465"
+	hollow.Volume           = 0.5
+	hollow.RollOffMaxDistance = 35
+	hollow.Parent           = part
 end
 
 -- ── Vein lifecycle ─────────────────────────────────────────────────────────
@@ -271,6 +279,17 @@ local function onMineOre(player, veinName)
 
 	-- Server-side range check
 	if (root.Position - veinState.part.Position).Magnitude > MINING_RANGE + 4 then return end
+
+	-- Block the hit if the player can't hold even one more unit of this ore type
+	local inv = getInventoryService().getInventory(player)
+	if inv then
+		local oreWeight = OreConfig[veinState.oreType].Weight
+		if inv.currentWeight + oreWeight > inv.maxWeight then
+			Remotes.Ore_HitBlocked:FireClient(player, veinName)
+			Remotes.Inv_Full:FireClient(player)
+			return
+		end
+	end
 
 	-- Apply damage
 	veinState.currentHP = math.max(0, veinState.currentHP - MINING_POWER)

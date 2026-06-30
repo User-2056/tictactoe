@@ -15,12 +15,13 @@ local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- Wait for Bootstrap to create the Remotes folder (happens at server start)
-local Remotes         = ReplicatedStorage:WaitForChild("Remotes")
-local MineOre         = Remotes:WaitForChild("MineOre")
-local Ore_VeinHit     = Remotes:WaitForChild("Ore_VeinHit")
-local Ore_VeinBroke   = Remotes:WaitForChild("Ore_VeinBroke")
-local Ore_VeinSpawned = Remotes:WaitForChild("Ore_VeinSpawned")
-local Ore_OreAwarded  = Remotes:WaitForChild("Ore_OreAwarded")
+local Remotes          = ReplicatedStorage:WaitForChild("Remotes")
+local MineOre          = Remotes:WaitForChild("MineOre")
+local Ore_VeinHit      = Remotes:WaitForChild("Ore_VeinHit")
+local Ore_VeinBroke    = Remotes:WaitForChild("Ore_VeinBroke")
+local Ore_VeinSpawned  = Remotes:WaitForChild("Ore_VeinSpawned")
+local Ore_OreAwarded   = Remotes:WaitForChild("Ore_OreAwarded")
+local Ore_HitBlocked   = Remotes:WaitForChild("Ore_HitBlocked")
 
 local mineFolder = workspace:WaitForChild("StarterMine")
 
@@ -58,6 +59,22 @@ end
 local character = player.Character or player.CharacterAdded:Wait()
 onCharacterAdded(character)
 player.CharacterAdded:Connect(onCharacterAdded)
+
+-- ── Blocked hit: inventory full, vein takes no damage ────────────────────────
+-- Shows the health bar (so the player sees they aimed correctly) and plays a
+-- dull hollow thud instead of the normal crack. The red banner is handled by
+-- InventoryController via Inv_Full (fired by the server alongside this event).
+
+Ore_HitBlocked.OnClientEvent:Connect(function(veinName)
+	damagedVeins[veinName] = true  -- heartbeat will show the health bar
+
+	local part = mineFolder:FindFirstChild(veinName)
+	if not part then return end
+
+	local sound = part:FindFirstChild("HollowSound")
+	if sound then sound:Play() end
+	-- No dust particles — nothing is actually being chipped away
+end)
 
 -- ── Hit effect: dust + sound ──────────────────────────────────────────────────
 
