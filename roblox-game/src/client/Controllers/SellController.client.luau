@@ -5,6 +5,7 @@
 
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService      = game:GetService("TweenService")
 
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -494,9 +495,55 @@ end
 
 -- ── Show / hide main dialog ─────────────────────────────────────────────────
 
+local function showNoOresHint()
+	local old = playerGui:FindFirstChild("NoOresHint")
+	if old then old:Destroy() end
+
+	local gui               = Instance.new("ScreenGui")
+	gui.Name                = "NoOresHint"
+	gui.ResetOnSpawn        = false
+	gui.ZIndexBehavior      = Enum.ZIndexBehavior.Sibling
+	gui.Parent              = playerGui
+
+	local frame             = Instance.new("Frame")
+	frame.Size              = UDim2.new(0, 300, 0, 42)
+	frame.Position          = UDim2.new(0.5, -150, 0.5, -80)
+	frame.BackgroundColor3  = Color3.fromRGB(60, 40, 20)
+	frame.BackgroundTransparency = 1
+	frame.BorderSizePixel   = 0
+	frame.ZIndex            = 80
+	frame.Parent            = gui
+	local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 8); c.Parent = frame
+
+	local label             = Instance.new("TextLabel")
+	label.Size              = UDim2.new(1, 0, 1, 0)
+	label.BackgroundTransparency = 1
+	label.TextColor3        = Color3.fromRGB(255, 210, 120)
+	label.Font              = Enum.Font.GothamBold
+	label.TextSize          = 14
+	label.Text              = "You have no ores to sell"
+	label.TextTransparency  = 1
+	label.ZIndex            = 81
+	label.Parent            = frame
+
+	TweenService:Create(frame, TweenInfo.new(0.15), { BackgroundTransparency = 0.2 }):Play()
+	TweenService:Create(label, TweenInfo.new(0.15), { TextTransparency = 0 }):Play()
+
+	task.delay(2, function()
+		if not frame.Parent then return end
+		TweenService:Create(frame, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+		local out = TweenService:Create(label, TweenInfo.new(0.3), { TextTransparency = 1 })
+		out:Play()
+		out.Completed:Connect(function() if gui.Parent then gui:Destroy() end end)
+	end)
+end
+
 local function openSellUI()
 	local rowCount = buildContent(cachedItems)
-	if rowCount == 0 then return end
+	if rowCount == 0 then
+		showNoOresHint()
+		return
+	end
 	sellScreen.Enabled = true
 end
 
