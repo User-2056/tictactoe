@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Guidance for Claude Code when working in this repository.
-Auto-updated at end of every session. Last updated: 2026-06-30 (post-M5 visual pass).
+Auto-updated at end of every session. Last updated: 2026-07-01 (starter outfit).
 
 ---
 
@@ -56,6 +56,18 @@ purchase better equipment, unlock new regions, and complete mining contracts.
   shrunk to 64×7 px, StudsOffset lifted to 3.8 studs above cluster. Gold veins have PointLight
   (amber, range 14) managed by OreService. Clicks on satellite children now correctly route to
   the parent vein. No OreService changes — purely a visual layer.
+- **Starter Outfit — COMPLETE**: `StarterOutfitService` gives every brand-new player a miner look
+  (safety-yellow hard hat accessory + grey/brown work clothes) the first time their character ever
+  spawns, and never touches it again after that — returning players' characters are left completely
+  alone. "New vs returning" is tracked via a single DataStore flag per player (`MinerStarterOutfit_v1`),
+  written once. Work clothes are done by removing the player's own Shirt/Pants (if any — real
+  clothing textures would otherwise render over BodyColors and hide the recolour) and setting
+  BodyColors on torso/arms (grey) and legs (brown); head/skin colour is untouched. Hard hat is a
+  procedurally-built Accessory (Ball-shaped Part + SpecialMesh-free dome look, safety yellow,
+  `HatAttachment` at Y=-0.85) — deliberately not an inserted catalog asset, since a Creator Store
+  search for real "hard hat"/"work shirt" assets returned mostly unverifiable junk. On DataStore
+  read/write failure (e.g. Studio API access not enabled) the service fails closed — it skips
+  applying anything rather than risk misjudging new vs. returning.
 - **Milestone 6 and beyond**: Not started.
 
 ---
@@ -175,6 +187,7 @@ Clients fire RemoteEvents to request actions; server validates and responds.
 | `Services/ContractService.luau` | skeleton | Will generate, track, and reward mining contracts |
 | `Services/RegionService.luau` | skeleton | Will track unlocked regions per player, handle licence purchase |
 | `Services/DataService.luau` | skeleton | Will save/load player data via DataStore with autosave |
+| `Services/StarterOutfitService.luau` | ✅ | First-ever spawn only: hard hat + work-colour BodyColors; gated on `MinerStarterOutfit_v1` DataStore flag |
 | `Data/DataService.server.luau` | ✅ M1 | Tests DataStore connection on startup; prints result to Output |
 
 ### Client (`src/client/`)
@@ -196,7 +209,7 @@ Clients fire RemoteEvents to request actions; server validates and responds.
 
 ---
 
-## How to Verify Current State (post-M5 + Visual Pass)
+## How to Verify Current State (post-Starter Outfit)
 
 1. `rojo serve` in `roblox-game/`, connect in Studio
 2. Press Play
@@ -211,6 +224,7 @@ Clients fire RemoteEvents to request actions; server validates and responds.
    [ContractService] Loaded
    [RegionService] Loaded
    [DataService] Loaded
+   [StarterOutfitService] Loaded
    [Bootstrap] All services loaded — Mining Corporation server is ready!
    [DevCommands] Loaded (Studio only) — /credits <n>  |  /ore <type> <n>
    ```
@@ -233,9 +247,34 @@ Clients fire RemoteEvents to request actions; server validates and responds.
    - "+1 Coal" (or equivalent) popup on break
 8. Walk to the Atlas Ore Exchange kiosk (at Z=−30) and sell ore
 9. Walk to the Frontier Mining Supplies kiosk (near X=15) and browse the equipment shop
+10. On first-ever Play as a given account, your character should spawn wearing a yellow hard hat
+    and grey/brown work clothes. Stop and Play again with the same account — the outfit should
+    NOT reapply a second time (see "Testing the starter outfit" below for how to reset it).
 
 **If DataStore prints a warning instead:** Go to Game Settings → Security → tick
 "Enable Studio Access to API Services", then Play again.
+
+**Important DataStore gotcha found while building the Starter Outfit feature:** `DataService.server.luau`'s
+"connection confirmed" check only calls `DataStoreService:GetDataStore(...)`, which always succeeds
+locally and does NOT prove real API access works — it never calls `GetAsync`/`SetAsync`. The first
+script to actually call those (`StarterOutfitService`) can still fail with
+`StudioAccessToApisNotAllowed` even when `DataService` reports success. If you build real M6
+persistence later, verify with an actual `GetAsync`/`SetAsync` call, not just `GetDataStore`.
+
+### Testing the starter outfit specifically
+- Requires "Enable Studio Access to API Services" ticked (Game Settings → Security) — without it,
+  `StarterOutfitService` fails closed and never touches the character (by design).
+- First Play ever (per Studio account) → character should spawn with the hard hat + recoloured
+  work clothes automatically, no other change to face/hair/accessories.
+- Stop and Play again → outfit should NOT reapply (this is the "returning player" path). This
+  proves the DataStore flag is gating correctly.
+- To re-test the "new player" path, clear the flag: `game:GetService("DataStoreService")
+  :GetDataStore("MinerStarterOutfit_v1"):RemoveAsync(tostring(game.Players.LocalPlayer.UserId))`
+  run once via the command bar (Studio Access to API Services must be on), then Play again.
+- To confirm returning players are untouched even if they equip their own Shirt/Pants/hat via the
+  Roblox avatar editor between sessions: that's automatic — the service only ever runs `applyOutfit`
+  when `sessionGranted` is true (first-time only), so a returning player's character is never
+  inspected or modified at all.
 
 ---
 

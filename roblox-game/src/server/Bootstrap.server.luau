@@ -55,6 +55,7 @@ local serviceNames = {
 	"ContractService",
 	"RegionService",
 	"DataService",
+	"StarterOutfitService",
 }
 
 for _, name in ipairs(serviceNames) do
