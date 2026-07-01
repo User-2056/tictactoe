@@ -56,17 +56,27 @@ purchase better equipment, unlock new regions, and complete mining contracts.
   shrunk to 64×7 px, StudsOffset lifted to 3.8 studs above cluster. Gold veins have PointLight
   (amber, range 14) managed by OreService. Clicks on satellite children now correctly route to
   the parent vein. No OreService changes — purely a visual layer.
-- **Starter Outfit — COMPLETE**: `StarterOutfitService` gives every player a miner look
-  (safety-yellow hard hat accessory + grey/brown work clothes) on every character spawn — new and
-  returning players alike, no DataStore tracking (an earlier new-vs-returning-only version was
-  simplified away per direction). Work clothes are done by removing the player's own Shirt/Pants
-  (if any — real clothing textures would otherwise render over BodyColors and hide the recolour)
-  and setting BodyColors on torso/arms (grey) and legs (brown); head/skin colour is untouched.
-  Hard hat is a procedurally-built Accessory (Ball-shaped `Part`, safety yellow, `HatAttachment`
-  at Y=-0.85, matched to the Head's own `HatAttachment` via a `RigidConstraint`) — deliberately not
-  an inserted catalog asset, since a Creator Store search for real "hard hat"/"work shirt" assets
-  returned mostly unverifiable junk. Idempotent per spawn (`FindFirstChild("MinerHardHat")` guard
-  before adding, so respawns don't stack duplicate hats).
+- **Starter Outfit — COMPLETE**: `StarterOutfitService` gives every player a miner look on every
+  character spawn — new and returning players alike, no DataStore tracking (an earlier
+  new-vs-returning-only version was simplified away per direction; a first pass using flat
+  `BodyColors` + a plain ball "hat" was also replaced after feedback that it read as painted skin
+  and a lemon, not clothing/a helmet). Current version:
+  - **Shirt/pants**: real Shirt/Pants the player's own avatar came equipped with are destroyed
+    first (their texture would otherwise render over any recolour), then individual R15 body parts
+    are coloured + set to `Enum.Material.Fabric` directly — `UpperTorso`/`LowerTorso`/
+    `LeftUpperArm`/`RightUpperArm` → slate grey (short-sleeve shirt), `*UpperLeg`/`*LowerLeg` →
+    brown (pants), `LeftFoot`/`RightFoot` → near-black (boots). Forearms/hands are deliberately left
+    at the player's own skin colour so the sleeve has a visible hem instead of colouring the whole
+    limb. R6 rigs (no separate forearm/hand/foot parts) fall back to colouring the single
+    Torso/Arm/Leg parts whole.
+  - **Hard hat**: procedurally-built Accessory, no catalog asset (Creator Store search for real
+    "hard hat"/"work shirt" assets returned mostly unverifiable junk). Three welded parts on the
+    Handle: a flattened `Ball` dome, a `Cylinder` brim (rotated flat, wider than the dome — this is
+    what makes it read as a hat silhouette instead of a sphere), and a small ridge strip along the
+    crown. `HatAttachment` on the Handle (Y=-0.8) matches the Head's own `HatAttachment` via a
+    `RigidConstraint`, added by Roblox automatically inside `Humanoid:AddAccessory`.
+  - Idempotent per spawn (`FindFirstChild("MinerHardHat")` guard before adding, so respawns don't
+    stack duplicate hats).
 - **Milestone 6 and beyond**: Not started.
 
 ---
