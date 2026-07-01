@@ -51,6 +51,11 @@ local function createHardHat()
 
 	-- Brim: a wide flat disc around the base -- this is what actually makes it
 	-- read as a hard hat silhouette instead of a sphere sitting on the head.
+	-- Uses a Weld with an explicit C0 offset (not WeldConstraint): WeldConstraint
+	-- captures whatever the *current* relative CFrame happens to be at the moment
+	-- it goes live, which is unreliable here since Handle gets repositioned onto
+	-- the head later by AddAccessory -- Brim ended up stranded near world origin.
+	-- Same gotcha already documented on the Pickaxe tool in OreService.luau.
 	local brim       = Instance.new("Part")
 	brim.Name        = "Brim"
 	brim.Shape       = Enum.PartType.Cylinder
@@ -60,14 +65,14 @@ local function createHardHat()
 	brim.CanCollide  = false
 	brim.CanQuery    = false
 	brim.Massless    = true
-	-- Cylinder's length runs along local X by default; rotate it flat so the
-	-- circular faces point up/down like a brim, then tuck it under the dome.
-	brim.CFrame      = handle.CFrame * CFrame.new(0, -0.32, 0) * CFrame.Angles(0, 0, math.rad(90))
 	brim.Parent      = accessory
 
-	local brimWeld   = Instance.new("WeldConstraint")
+	local brimWeld   = Instance.new("Weld")
 	brimWeld.Part0   = handle
 	brimWeld.Part1   = brim
+	-- Cylinder's length runs along local X by default; rotate it flat so the
+	-- circular faces point up/down like a brim, then tuck it under the dome.
+	brimWeld.C0      = CFrame.new(0, -0.32, 0) * CFrame.Angles(0, 0, math.rad(90))
 	brimWeld.Parent  = handle
 
 	-- Ridge: a small front-to-back raised strip, the detail most real
@@ -80,12 +85,12 @@ local function createHardHat()
 	ridge.CanCollide = false
 	ridge.CanQuery   = false
 	ridge.Massless   = true
-	ridge.CFrame     = handle.CFrame * CFrame.new(0, 0.38, 0)
 	ridge.Parent     = accessory
 
-	local ridgeWeld  = Instance.new("WeldConstraint")
+	local ridgeWeld  = Instance.new("Weld")
 	ridgeWeld.Part0  = handle
 	ridgeWeld.Part1  = ridge
+	ridgeWeld.C0     = CFrame.new(0, 0.38, 0)
 	ridgeWeld.Parent = handle
 
 	-- Roblox aligns accessories by matching an Attachment name on the Handle

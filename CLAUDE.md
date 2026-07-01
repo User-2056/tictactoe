@@ -70,13 +70,26 @@ purchase better equipment, unlock new regions, and complete mining contracts.
     limb. R6 rigs (no separate forearm/hand/foot parts) fall back to colouring the single
     Torso/Arm/Leg parts whole.
   - **Hard hat**: procedurally-built Accessory, no catalog asset (Creator Store search for real
-    "hard hat"/"work shirt" assets returned mostly unverifiable junk). Three welded parts on the
-    Handle: a flattened `Ball` dome, a `Cylinder` brim (rotated flat, wider than the dome — this is
-    what makes it read as a hat silhouette instead of a sphere), and a small ridge strip along the
-    crown. `HatAttachment` on the Handle (Y=-0.8) matches the Head's own `HatAttachment` via a
+    "hard hat"/"work shirt" assets returned mostly unverifiable junk). Three parts on the Handle:
+    a flattened `Ball` dome, a `Cylinder` brim (rotated flat, wider than the dome — this is what
+    makes it read as a hat silhouette instead of a sphere), and a small ridge strip along the crown.
+    `HatAttachment` on the Handle (Y=-0.8) matches the Head's own `HatAttachment` via a
     `RigidConstraint`, added by Roblox automatically inside `Humanoid:AddAccessory`.
   - Idempotent per spawn (`FindFirstChild("MinerHardHat")` guard before adding, so respawns don't
     stack duplicate hats).
+  - **Bug hit and fixed**: Brim/Ridge were originally attached to Handle with `WeldConstraint`.
+    `WeldConstraint` captures whatever the *current* relative CFrame happens to be at the moment it
+    goes live, not at creation time — since Handle gets moved onto the head later by
+    `AddAccessory`, Brim/Ridge (positioned via `handle.CFrame * offset` while Handle was still
+    sitting near world origin, pre-parenting) ended up welded at a huge wrong offset, stranded near
+    world origin, completely detached from the actual hat on the player's head. Reported by the
+    user as "hat floating/misplaced, shape looks off, clothes look wrong, something broken" — the
+    clothes were actually fine; a badly broken hat model apparently read as "everything is wrong."
+    Fixed by switching to `Weld` with an explicit `C0` offset instead, which is timing-independent
+    (this exact gotcha was already documented in this file for the Pickaxe tool in
+    `OreService.luau` — should have applied that lesson the first time). Verified by checking
+    `(Handle.Position - Brim.Position).Magnitude` equals the intended offset before trusting any
+    screenshot again.
 - **Milestone 6 and beyond**: Not started.
 
 ---
