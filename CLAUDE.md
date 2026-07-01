@@ -68,7 +68,14 @@ purchase better equipment, unlock new regions, and complete mining contracts.
     brown (pants), `LeftFoot`/`RightFoot` → near-black (boots). Forearms/hands are deliberately left
     at the player's own skin colour so the sleeve has a visible hem instead of colouring the whole
     limb. R6 rigs (no separate forearm/hand/foot parts) fall back to colouring the single
-    Torso/Arm/Leg parts whole.
+    Torso/Arm/Leg parts whole (no trim, see below).
+  - **Clothing trim (R15 only)**: flat recolour alone still read as "painted skin, not a shirt" per
+    user feedback, so `addClothingTrim` welds flat rotated-`Cylinder` rings (same technique as the
+    hat's Brim) onto the body to give the clothes actual visible seams: `ShirtCollar` at the top of
+    `UpperTorso`, `LeftSleeveCuff`/`RightSleeveCuff` at the bottom of each `*UpperArm`, and a
+    near-black leather-look `Belt` at the bottom of `LowerTorso`. All sized as a fraction of the
+    live body part's own `Size` (not hardcoded), so it scales across different avatar proportions.
+    Uses explicit `Weld.C0` from the start this time, not `WeldConstraint` (see bug below).
   - **Hard hat**: procedurally-built Accessory, no catalog asset (Creator Store search for real
     "hard hat"/"work shirt" assets returned mostly unverifiable junk). Three parts on the Handle:
     a flattened `Ball` dome, a `Cylinder` brim (rotated flat, wider than the dome — this is what
@@ -90,6 +97,33 @@ purchase better equipment, unlock new regions, and complete mining contracts.
     `OreService.luau` — should have applied that lesson the first time). Verified by checking
     `(Handle.Position - Brim.Position).Magnitude` equals the intended offset before trusting any
     screenshot again.
+
+### ⚠️ Recurring stray "WelderPart" asset error — SAVE THE PLACE AFTER FIXING
+
+Symptom on Play: `Downloading asset failed for asset id 6214908441 ... - Server - WelderPart:1`.
+Cause: a stray `Script` (source: `require(6214908441)`, an inaccessible/broken asset) sitting on
+one of the "Ore" satellite pieces under `Workspace.StarterMine.OreNode_*`. Not part of any
+Rojo-managed source file — this is leftover debris directly in the Workspace instance tree.
+
+This has now been deleted **twice** in two different sessions, on two *different* ore nodes
+(`OreNode_gold_14.Ore3`, then later `OreNode_coal_8.Ore1`) — meaning either it exists on more than
+one Ore satellite piece and different sessions surface different ones, or Studio's AutoRecover is
+restoring from a stale unsaved snapshot after a crash/restart. Root cause not fully confirmed.
+
+**If this happens again:** run this in the command bar (Edit mode) to delete every copy at once
+and confirm none remain, rather than deleting just the one path in the error message:
+```lua
+for _, d in ipairs(workspace:GetDescendants()) do
+    if d:IsA("Script") then
+        local ok, src = pcall(function() return d.Source end)
+        if ok and src and src:match("require%(%d%d%d%d%d%d+%)") then d:Destroy() end
+    end
+end
+```
+**Then immediately save the place (Ctrl+S).** MCP edits made in Edit mode only change the
+in-memory DataModel — if Studio crashes or is closed without saving, the fix is lost and Studio's
+AutoRecover may restore a version that still has the stray script. This is suspected to be why it
+came back at all.
 - **Milestone 6 and beyond**: Not started.
 
 ---

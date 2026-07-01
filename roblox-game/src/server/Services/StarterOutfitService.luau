@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local SAFETY_YELLOW = Color3.fromRGB(237, 178, 15)
 local SAFETY_YELLOW_DARK = Color3.fromRGB(196, 140, 8)  -- brim/ridge shading
 local SHIRT_COLOR    = Color3.fromRGB(88, 96, 104)   -- muted slate grey
+local SHIRT_TRIM     = Color3.fromRGB(58, 64, 70)    -- darker collar/cuff/waistband trim
 local PANTS_COLOR    = Color3.fromRGB(74, 58, 46)    -- dark work-trouser brown
 local BOOT_COLOR     = Color3.fromRGB(31, 27, 24)    -- near-black leather
 
@@ -29,6 +30,63 @@ local function colorParts(character, names, color)
 			part.Color = color
 			part.Material = Enum.Material.Fabric
 		end
+	end
+end
+
+-- A flat ring (rotated Cylinder, same trick as the hat's Brim) welded around a
+-- limb at a given height -- this is what makes the clothes read as an actual
+-- garment with seams (collar, cuffs, waistband) instead of just a recoloured
+-- body. Uses an explicit Weld C0 offset for the same reason as the hat's Brim/
+-- Ridge: relying on "current relative position" (WeldConstraint) is unreliable
+-- once the body part might already be mid-repositioning.
+local function addTrimRing(character, bodyPart, yOffset, diameter, thickness, color, name)
+	if not bodyPart then return end
+
+	local existing = character:FindFirstChild(name)
+	if existing then existing:Destroy() end
+
+	local ring         = Instance.new("Part")
+	ring.Name          = name
+	ring.Shape         = Enum.PartType.Cylinder
+	ring.Size          = Vector3.new(thickness, diameter, diameter)
+	ring.Color         = color
+	ring.Material      = Enum.Material.Fabric
+	ring.CanCollide    = false
+	ring.CanQuery      = false
+	ring.Massless      = true
+	ring.Parent        = character
+
+	local weld   = Instance.new("Weld")
+	weld.Part0   = bodyPart
+	weld.Part1   = ring
+	weld.C0      = CFrame.new(0, yOffset, 0) * CFrame.Angles(0, 0, math.rad(90))
+	weld.Parent  = bodyPart
+end
+
+local function addClothingTrim(character)
+	local upperTorso    = character:FindFirstChild("UpperTorso")
+	local lowerTorso     = character:FindFirstChild("LowerTorso")
+	local leftUpperArm  = character:FindFirstChild("LeftUpperArm")
+	local rightUpperArm = character:FindFirstChild("RightUpperArm")
+
+	if upperTorso then
+		addTrimRing(character, upperTorso, upperTorso.Size.Y * 0.42,
+			upperTorso.Size.X * 0.42, 0.12, SHIRT_TRIM, "ShirtCollar")
+	end
+	if leftUpperArm then
+		addTrimRing(character, leftUpperArm, -leftUpperArm.Size.Y * 0.46,
+			leftUpperArm.Size.X * 1.2, 0.1, SHIRT_TRIM, "LeftSleeveCuff")
+	end
+	if rightUpperArm then
+		addTrimRing(character, rightUpperArm, -rightUpperArm.Size.Y * 0.46,
+			rightUpperArm.Size.X * 1.2, 0.1, SHIRT_TRIM, "RightSleeveCuff")
+	end
+	-- Belt: the one boundary marker between shirt and pants, in leather-black
+	-- rather than a second grey/brown band, so it doesn't visually compete
+	-- with the collar/cuffs or the pants trim.
+	if lowerTorso then
+		addTrimRing(character, lowerTorso, -lowerTorso.Size.Y * 0.42,
+			lowerTorso.Size.X * 1.1, 0.14, BOOT_COLOR, "Belt")
 	end
 end
 
@@ -118,6 +176,7 @@ local function applyOutfit(character)
 		colorParts(character, SHIRT_PARTS_R15, SHIRT_COLOR)
 		colorParts(character, PANTS_PARTS_R15, PANTS_COLOR)
 		colorParts(character, BOOT_PARTS_R15, BOOT_COLOR)
+		addClothingTrim(character)
 	else
 		colorParts(character, SHIRT_PARTS_R6, SHIRT_COLOR)
 		colorParts(character, PANTS_PARTS_R6, PANTS_COLOR)
