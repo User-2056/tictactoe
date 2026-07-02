@@ -78,6 +78,14 @@ function PickaxeBuilder.build(pickaxeId)
 		ringWeld.Parent         = handle
 	end
 
+	print(string.format("[PickaxeBuilder] built %s (id=%s) with %d children: %s",
+		EquipmentConfig.ToolName, pickaxeId, #tool:GetChildren(),
+		table.concat((function()
+			local names = {}
+			for _, c in ipairs(tool:GetChildren()) do table.insert(names, c.Name) end
+			return names
+		end)(), ", ")))
+
 	return tool
 end
 

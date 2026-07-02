@@ -82,7 +82,15 @@ function EquipmentService.syncPickaxeTool(player, opts)
 	local wasHeld  = heldTool ~= nil
 	local existing = heldTool or (backpack and backpack:FindFirstChild(EquipmentConfig.ToolName))
 
+	print(string.format(
+		"[EquipmentService] syncPickaxeTool(%s): pickaxeId=%s character=%s backpack=%s existing=%s wasHeld=%s existingPickaxeId=%s forceEquip=%s",
+		player.Name, pickaxeId, tostring(character ~= nil), tostring(backpack ~= nil),
+		tostring(existing ~= nil), tostring(wasHeld),
+		tostring(existing and existing:GetAttribute("PickaxeId")), tostring(opts.forceEquip)
+	))
+
 	if existing and existing:GetAttribute("PickaxeId") == pickaxeId then
+		print("[EquipmentService] syncPickaxeTool: existing tool already matches, no rebuild")
 		if opts.forceEquip and not wasHeld and character then
 			local humanoid = character:FindFirstChildOfClass("Humanoid")
 			if humanoid then humanoid:EquipTool(existing) end
@@ -90,14 +98,24 @@ function EquipmentService.syncPickaxeTool(player, opts)
 		return
 	end
 
-	if not backpack then return end
+	if not backpack then
+		print("[EquipmentService] syncPickaxeTool: no backpack yet, aborting")
+		return
+	end
 
 	local newTool = PickaxeBuilder.build(pickaxeId)
 	newTool.Parent = backpack
+	print(string.format("[EquipmentService] syncPickaxeTool: parented new tool into backpack, %d children",
+		#newTool:GetChildren()))
 
 	if (wasHeld or opts.forceEquip) and character then
 		local humanoid = character:FindFirstChildOfClass("Humanoid")
-		if humanoid then humanoid:EquipTool(newTool) end
+		if humanoid then
+			humanoid:EquipTool(newTool)
+			print("[EquipmentService] syncPickaxeTool: EquipTool called")
+		else
+			print("[EquipmentService] syncPickaxeTool: no Humanoid found, could not equip")
+		end
 	end
 
 	-- Destroy the stale tool last -- EquipTool above already unequips it as part of
