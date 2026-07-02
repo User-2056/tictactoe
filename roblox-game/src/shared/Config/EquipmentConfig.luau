@@ -23,7 +23,7 @@ return {
 				HandleColor    = Color3.fromRGB(94, 68, 42),    -- worn dark brown
 				HandleMaterial = Enum.Material.Wood,
 				HeadSize       = Vector3.new(1.3, 0.6, 0.6),
-				HeadColor      = Color3.fromRGB(112, 108, 100), -- lighter warm grey -- "dark stone" but still visible against the handle/shadows
+				HeadColor      = Color3.fromRGB(120, 100, 80),  -- warm dull tan-grey stone -- distinct from Iron's cool bright silver
 				HeadMaterial   = Enum.Material.Slate,
 				Bands          = {},
 			},
@@ -32,10 +32,10 @@ return {
 			Id = "iron_pickaxe", Name = "Iron Pickaxe", MiningPower = 2, Cost = 2500, Tier = 2,
 			Visual = {
 				HandleSize     = Vector3.new(0.38, 0.38, 1.7),
-				HandleColor    = Color3.fromRGB(120, 86, 53),   -- richer polished wood
+				HandleColor    = Color3.fromRGB(150, 105, 55),  -- noticeably lighter/more golden than Starter's dark worn brown
 				HandleMaterial = Enum.Material.Wood,
 				HeadSize       = Vector3.new(1.4, 0.65, 0.65),
-				HeadColor      = Color3.fromRGB(170, 170, 175), -- clean silver
+				HeadColor      = Color3.fromRGB(190, 195, 205), -- cool bright silver -- distinct from Starter's warm dull stone
 				HeadMaterial   = Enum.Material.Metal,
 				Bands          = {
 					{ Size = Vector3.new(0.14, 0.48, 0.48), Color = Color3.fromRGB(80, 80, 86), Material = Enum.Material.Metal, OffsetZ = -0.3 },

@@ -78,10 +78,12 @@ function PickaxeBuilder.build(pickaxeId)
 		ring.Material        = band.Material
 		ring.Parent          = tool
 
+		-- Same -Z flip as the head weld above -- OffsetZ in EquipmentConfig is written as
+		-- "distance from handle center toward the head", so it needs the same sign correction.
 		local ringWeld         = Instance.new("Weld")
 		ringWeld.Part0          = handle
 		ringWeld.Part1          = ring
-		ringWeld.C0             = CFrame.new(0, 0, band.OffsetZ) * CFrame.Angles(0, math.rad(90), 0)
+		ringWeld.C0             = CFrame.new(0, 0, -band.OffsetZ) * CFrame.Angles(0, math.rad(90), 0)
 		ringWeld.Parent         = handle
 	end
 
