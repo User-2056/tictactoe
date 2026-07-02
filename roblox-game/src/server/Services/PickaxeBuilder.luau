@@ -51,10 +51,13 @@ function PickaxeBuilder.build(pickaxeId)
 	-- goes live, not at creation time -- unreliable here since the tool moves from the Backpack
 	-- (parts at origin) into the player's hand. Same gotcha documented in StarterOutfitService.luau's
 	-- hat Brim/Ridge.
+	-- Offset is handle-half-length PLUS head-half-depth so the head sits fully past the tip of the
+	-- shaft instead of centered on it -- centering it on the tip buries half the head's volume
+	-- inside the handle, which reads as "missing" rather than as a distinct piece at a glance.
 	local headWeld         = Instance.new("Weld")
 	headWeld.Part0          = handle
 	headWeld.Part1          = head
-	headWeld.C0             = CFrame.new(0, 0, visual.HandleSize.Z / 2)
+	headWeld.C0             = CFrame.new(0, 0, visual.HandleSize.Z / 2 + visual.HeadSize.Z / 2)
 	headWeld.Parent         = handle
 
 	-- Reinforcement bands (Iron/Steel) -- flat rings wrapped around the handle, same
@@ -77,14 +80,6 @@ function PickaxeBuilder.build(pickaxeId)
 		ringWeld.C0             = CFrame.new(0, 0, band.OffsetZ) * CFrame.Angles(0, math.rad(90), 0)
 		ringWeld.Parent         = handle
 	end
-
-	print(string.format("[PickaxeBuilder] built %s (id=%s) with %d children: %s",
-		EquipmentConfig.ToolName, pickaxeId, #tool:GetChildren(),
-		table.concat((function()
-			local names = {}
-			for _, c in ipairs(tool:GetChildren()) do table.insert(names, c.Name) end
-			return names
-		end)(), ", ")))
 
 	return tool
 end

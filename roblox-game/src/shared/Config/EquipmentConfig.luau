@@ -22,8 +22,8 @@ return {
 				HandleSize     = Vector3.new(0.18, 0.18, 1.3),
 				HandleColor    = Color3.fromRGB(94, 68, 42),    -- worn dark brown
 				HandleMaterial = Enum.Material.Wood,
-				HeadSize       = Vector3.new(0.7, 0.2, 0.2),
-				HeadColor      = Color3.fromRGB(72, 70, 66),    -- dull dark grey -- reads as "dark stone"
+				HeadSize       = Vector3.new(0.85, 0.24, 0.24),
+				HeadColor      = Color3.fromRGB(112, 108, 100), -- lighter warm grey -- "dark stone" but still visible against the handle/shadows
 				HeadMaterial   = Enum.Material.Slate,
 				Bands          = {},
 			},
@@ -34,7 +34,7 @@ return {
 				HandleSize     = Vector3.new(0.2, 0.2, 1.4),
 				HandleColor    = Color3.fromRGB(120, 86, 53),   -- richer polished wood
 				HandleMaterial = Enum.Material.Wood,
-				HeadSize       = Vector3.new(0.85, 0.22, 0.22),
+				HeadSize       = Vector3.new(0.95, 0.26, 0.26),
 				HeadColor      = Color3.fromRGB(170, 170, 175), -- clean silver
 				HeadMaterial   = Enum.Material.Metal,
 				Bands          = {
@@ -48,8 +48,8 @@ return {
 				HandleSize     = Vector3.new(0.22, 0.22, 1.5),
 				HandleColor    = Color3.fromRGB(55, 55, 60),    -- dark, fully metal-clad
 				HandleMaterial = Enum.Material.Metal,
-				HeadSize       = Vector3.new(1.0, 0.28, 0.26),
-				HeadColor      = Color3.fromRGB(40, 42, 46),    -- dark steel
+				HeadSize       = Vector3.new(1.1, 0.3, 0.28),
+				HeadColor      = Color3.fromRGB(60, 63, 68),    -- dark steel, kept just bright enough to read against shadow
 				HeadMaterial   = Enum.Material.DiamondPlate,    -- industrial texture
 				Bands          = {
 					{ Size = Vector3.new(0.08, 0.3, 0.3), Color = Color3.fromRGB(30, 30, 34), Material = Enum.Material.DiamondPlate, OffsetZ = -0.35 },
