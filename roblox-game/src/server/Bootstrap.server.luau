@@ -44,17 +44,6 @@ end
 
 print("[Bootstrap] Created Remotes folder with", #remoteNames, "RemoteEvents")
 
--- Sync/connectivity test block -- ask to remove once confirmed visible.
-local testBlock          = Instance.new("Part")
-testBlock.Name           = "SyncTestBlock"
-testBlock.Size            = Vector3.new(10, 10, 10)
-testBlock.Position        = Vector3.new(0, 30, 0)
-testBlock.Anchored        = true
-testBlock.BrickColor      = BrickColor.new("Really red")
-testBlock.Material        = Enum.Material.Neon
-testBlock.Parent          = workspace
-print("[Bootstrap] Created 10x10x10 red SyncTestBlock at (0, 30, 0)")
-
 local Services = script.Parent.Services
 
 local serviceNames = {
