@@ -54,10 +54,14 @@ function PickaxeBuilder.build(pickaxeId)
 	-- Offset is handle-half-length PLUS head-half-depth so the head sits fully past the tip of the
 	-- shaft instead of centered on it -- centering it on the tip buries half the head's volume
 	-- inside the handle, which reads as "missing" rather than as a distinct piece at a glance.
+	-- NEGATIVE Z: with this Tool's GripPos, +Z points back toward the character's hand/body, not
+	-- away from it -- confirmed by testing, opposite of the "front tip" assumption in the comment
+	-- above (which matched the original single-tier tool, but that tool's head was apparently never
+	-- actually confirmed visible either). -Z is the side that reads as sticking out from the body.
 	local headWeld         = Instance.new("Weld")
 	headWeld.Part0          = handle
 	headWeld.Part1          = head
-	headWeld.C0             = CFrame.new(0, 0, visual.HandleSize.Z / 2 + visual.HeadSize.Z / 2)
+	headWeld.C0             = CFrame.new(0, 0, -(visual.HandleSize.Z / 2 + visual.HeadSize.Z / 2))
 	headWeld.Parent         = handle
 
 	-- Reinforcement bands (Iron/Steel) -- flat rings wrapped around the handle, same
