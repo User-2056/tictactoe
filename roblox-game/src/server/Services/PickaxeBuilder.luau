@@ -46,8 +46,6 @@ function PickaxeBuilder.build(pickaxeId)
 	head.Material          = visual.HeadMaterial
 	head.Parent            = tool
 
-	print(string.format("[PickaxeBuilder] %s: HeadSize on this run = %s", pickaxeId, tostring(head.Size)))
-
 	-- Use Weld (not WeldConstraint) so C0 defines the offset explicitly.
 	-- WeldConstraint captures whatever the *current* relative CFrame happens to be at the moment it
 	-- goes live, not at creation time -- unreliable here since the tool moves from the Backpack
