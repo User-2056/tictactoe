@@ -360,6 +360,49 @@ local function refreshButtons()
 	end
 end
 
+-- ── Equip flash ───────────────────────────────────────────────────────────────
+-- Brief glow on the newly-equipped pickaxe so buying an upgrade reads as an event,
+-- not a silent stat change. Polls briefly for the tool to appear in Character since
+-- the server's tool swap and this Eq_Update remote can arrive a frame or two apart.
+
+local function flashPickaxeInHand()
+	task.spawn(function()
+		local character = player.Character
+		if not character then return end
+
+		local tool
+		for _ = 1, 20 do
+			tool = character:FindFirstChild(EquipmentConfig.ToolName)
+			if tool then break end
+			task.wait(0.05)
+		end
+		if not tool then return end
+
+		-- Adornee the Handle specifically, not the Tool -- Tool inherits from
+		-- BackpackItem, not Model/BasePart, so a Highlight adorned directly to it
+		-- is not guaranteed to render.
+		local handlePart = tool:FindFirstChild("Handle")
+		if not handlePart then return end
+
+		local highlight               = Instance.new("Highlight")
+		highlight.FillColor           = Color3.fromRGB(255, 255, 255)
+		highlight.FillTransparency    = 0.15
+		highlight.OutlineColor        = Color3.fromRGB(255, 240, 150)
+		highlight.OutlineTransparency = 0
+		highlight.Adornee             = handlePart
+		highlight.Parent              = tool
+
+		TweenService:Create(highlight, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {
+			FillTransparency    = 1,
+			OutlineTransparency = 1,
+		}):Play()
+
+		task.delay(0.75, function()
+			if highlight.Parent then highlight:Destroy() end
+		end)
+	end)
+end
+
 -- ── Upgrade toast ─────────────────────────────────────────────────────────────
 
 local function showUpgradeToast(msg)
@@ -451,6 +494,7 @@ Eq_Update.OnClientEvent:Connect(function(pickaxeId, backpackId, ownedPickaxeList
 			for _, p in ipairs(EquipmentConfig.Pickaxes) do
 				if p.Id == pickaxeId then
 					upgradeSound:Play()
+					flashPickaxeInHand()
 					showUpgradeToast(string.format("%s Equipped  —  Mining Power ×%d", p.Name, p.MiningPower))
 					break
 				end

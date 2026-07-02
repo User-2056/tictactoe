@@ -4,16 +4,15 @@
 -- request from clients; awards ore on vein break; schedules weighted respawn.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players           = game:GetService("Players")
-local StarterPack       = game:GetService("StarterPack")
 
-local OreConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("OreConfig"))
-local Remotes   = ReplicatedStorage:WaitForChild("Remotes")
+local OreConfig       = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("OreConfig"))
+local EquipmentConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("EquipmentConfig"))
+local Remotes          = ReplicatedStorage:WaitForChild("Remotes")
 
 local MINE_FOLDER        = "StarterMine"
 local BASE_DAMAGE        = 25   -- damage per swing at MiningPower=1; multiplied by player's tier
 local MINING_RANGE       = 12   -- studs; server validates this on every request
-local PICKAXE_NAME       = "Pickaxe"
+local PICKAXE_NAME       = EquipmentConfig.ToolName
 
 -- keyed by Part.Name  →  { part, oreType, currentHP, maxHP, active }
 local veins = {}
@@ -23,60 +22,8 @@ local veins = {}
 -- receive the reset via normal property replication.
 local satSnapshots = {}  -- { [veinName] = { [childName] = { cf=CFrame, sz=Vector3 } } }
 
--- ── Pickaxe tool ───────────────────────────────────────────────────────────
-
-local function createPickaxeTool()
-	local tool              = Instance.new("Tool")
-	tool.Name               = PICKAXE_NAME
-	tool.ToolTip            = "Basic Pickaxe  |  Mining Power 1"
-	tool.CanBeDropped       = false
-	tool.RequiresHandle     = true
-	-- Position the grip so the player holds the lower third of the shaft
-	tool.GripPos            = Vector3.new(0, 0, -0.4)
-
-	-- Shaft (the handle the player grips)
-	local shaft             = Instance.new("Part")
-	shaft.Name              = "Handle"
-	shaft.Size              = Vector3.new(0.2, 0.2, 1.4)
-	shaft.Color             = Color3.fromRGB(106, 76, 47)
-	shaft.Material          = Enum.Material.Wood
-	shaft.Parent            = tool
-
-	-- Head (the metal pick crossbar, welded at the front tip of the shaft)
-	local head              = Instance.new("Part")
-	head.Name               = "Head"
-	head.Size               = Vector3.new(0.85, 0.22, 0.22)  -- wide horizontal bar
-	head.Color              = Color3.fromRGB(163, 162, 165)
-	head.Material           = Enum.Material.Metal
-	head.Parent             = tool
-
-	-- Use Weld (not WeldConstraint) so C0/C1 defines the offset explicitly.
-	-- WeldConstraint captures the current world CFrame delta — useless in the Backpack
-	-- where both parts sit at (0,0,0). Weld.C0 is always relative to Part0.
-	local weld              = Instance.new("Weld")
-	weld.Part0              = shaft
-	weld.Part1              = head
-	weld.C0                 = CFrame.new(0, 0, 0.7)   -- head sits at the front tip of shaft
-	weld.Parent             = shaft
-
-	return tool
-end
-
-local function givePickaxe(player)
-	local backpack = player:FindFirstChild("Backpack")
-	if backpack and not backpack:FindFirstChild(PICKAXE_NAME) then
-		createPickaxeTool().Parent = backpack
-	end
-end
-
--- StarterPack ensures the pickaxe is re-given automatically on every respawn
-createPickaxeTool().Parent = StarterPack
-
--- Give to any players already in the game when this service loads
-Players.PlayerAdded:Connect(givePickaxe)
-for _, player in ipairs(Players:GetPlayers()) do
-	givePickaxe(player)
-end
+-- Pickaxe tool giving/model selection now lives in EquipmentService.syncPickaxeTool,
+-- since the visual model depends on the player's owned/equipped tier -- see PickaxeBuilder.luau.
 
 -- ── Helpers ────────────────────────────────────────────────────────────────
 

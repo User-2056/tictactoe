@@ -15,6 +15,8 @@ local RunService        = game:GetService("RunService")
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+local EquipmentConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("EquipmentConfig"))
+
 local Remotes          = ReplicatedStorage:WaitForChild("Remotes")
 local MineOre          = Remotes:WaitForChild("MineOre")
 local Ore_VeinHit      = Remotes:WaitForChild("Ore_VeinHit")
@@ -120,14 +122,14 @@ local function onPickaxeActivated()
 end
 
 local function watchTool(item)
-	if item:IsA("Tool") and item.Name == "Pickaxe" then
+	if item:IsA("Tool") and item.Name == EquipmentConfig.ToolName then
 		item.Activated:Connect(onPickaxeActivated)
 	end
 end
 
 local function onCharacterAdded(character)
 	character.ChildAdded:Connect(watchTool)
-	local existing = character:FindFirstChild("Pickaxe")
+	local existing = character:FindFirstChild(EquipmentConfig.ToolName)
 	if existing then watchTool(existing) end
 end
 

@@ -7,6 +7,7 @@ local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EquipmentConfig   = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("EquipmentConfig"))
+local PickaxeBuilder    = require(script.Parent.PickaxeBuilder)
 local Remotes           = ReplicatedStorage:WaitForChild("Remotes")
 local PurchaseEquipment = Remotes:WaitForChild("PurchaseEquipment")
 local EquipItem         = Remotes:WaitForChild("EquipItem")
@@ -62,6 +63,48 @@ function EquipmentService.getEquipped(player)
 	return equipped[player]
 end
 
+-- Ensures the player's held/backpacked Pickaxe tool matches their equipped tier,
+-- rebuilding it via PickaxeBuilder if it's missing or the wrong PickaxeId.
+-- opts.forceEquip: put the (re)built tool directly into the player's hand even if
+-- nothing was previously held -- used for the "new purchase" moment so the upgrade
+-- is felt immediately, not just on next respawn/manual re-equip.
+function EquipmentService.syncPickaxeTool(player, opts)
+	opts = opts or {}
+
+	local eq = equipped[player]
+	local pickaxeId = eq and eq.pickaxeId
+	if not pickaxeId then return end
+
+	local character = player.Character
+	local backpack   = player:FindFirstChild("Backpack")
+
+	local heldTool = character and character:FindFirstChild(EquipmentConfig.ToolName)
+	local wasHeld  = heldTool ~= nil
+	local existing = heldTool or (backpack and backpack:FindFirstChild(EquipmentConfig.ToolName))
+
+	if existing and existing:GetAttribute("PickaxeId") == pickaxeId then
+		if opts.forceEquip and not wasHeld and character then
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid then humanoid:EquipTool(existing) end
+		end
+		return
+	end
+
+	if not backpack then return end
+
+	local newTool = PickaxeBuilder.build(pickaxeId)
+	newTool.Parent = backpack
+
+	if (wasHeld or opts.forceEquip) and character then
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if humanoid then humanoid:EquipTool(newTool) end
+	end
+
+	-- Destroy the stale tool last -- EquipTool above already unequips it as part of
+	-- swapping the hand to newTool, so this ordering never leaves the player bare-handed.
+	if existing then existing:Destroy() end
+end
+
 -- ── PurchaseEquipment handler ──────────────────────────────────────────────
 -- Buying adds the item to owned and auto-equips it (new item is always better).
 
@@ -101,6 +144,7 @@ PurchaseEquipment.OnServerEvent:Connect(function(player, itemType, itemId)
 	ownedSet[itemId] = true
 	if itemType == "pickaxe" then
 		eq.pickaxeId = itemId
+		EquipmentService.syncPickaxeTool(player, { forceEquip = true })
 	else
 		eq.backpackId = itemId
 		getInventory().setMaxWeight(player, item.Capacity)
@@ -130,6 +174,7 @@ EquipItem.OnServerEvent:Connect(function(player, itemType, itemId)
 
 	if itemType == "pickaxe" then
 		eq.pickaxeId = itemId
+		EquipmentService.syncPickaxeTool(player)
 	else
 		eq.backpackId = itemId
 		getInventory().setMaxWeight(player, item.Capacity)
@@ -155,10 +200,24 @@ local function removePlayer(player)
 	equipped[player] = nil
 end
 
-Players.PlayerAdded:Connect(initPlayer)
+-- On every spawn (not just the first), make sure the held/backpacked Pickaxe
+-- matches the player's currently equipped tier -- this is also what re-gives the
+-- correct-tier tool after death, since a *held* tool is destroyed along with the
+-- old Character rig, while an unheld one survives in Backpack on its own.
+local function onCharacterAdded(player)
+	EquipmentService.syncPickaxeTool(player)
+end
+
+local function onPlayerAdded(player)
+	initPlayer(player)
+	player.CharacterAdded:Connect(function() onCharacterAdded(player) end)
+	if player.Character then onCharacterAdded(player) end
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
 Players.PlayerRemoving:Connect(removePlayer)
 for _, player in ipairs(Players:GetPlayers()) do
-	initPlayer(player)
+	onPlayerAdded(player)
 end
 
 print("[EquipmentService] Loaded")
