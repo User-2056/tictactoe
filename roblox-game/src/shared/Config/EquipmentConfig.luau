@@ -22,9 +22,9 @@ return {
 				HandleSize     = Vector3.new(0.18, 0.18, 1.3),
 				HandleColor    = Color3.fromRGB(94, 68, 42),    -- worn dark brown
 				HandleMaterial = Enum.Material.Wood,
-				HeadSize       = Vector3.new(0.85, 0.24, 0.24),
-				HeadColor      = Color3.fromRGB(112, 108, 100), -- lighter warm grey -- "dark stone" but still visible against the handle/shadows
-				HeadMaterial   = Enum.Material.Slate,
+				HeadSize       = Vector3.new(3, 3, 3), -- TEMP DIAGNOSTIC: huge + neon, see if it shows up at all
+				HeadColor      = Color3.fromRGB(255, 0, 255),
+				HeadMaterial   = Enum.Material.Neon,
 				Bands          = {},
 			},
 		},
