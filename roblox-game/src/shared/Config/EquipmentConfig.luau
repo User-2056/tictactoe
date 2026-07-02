@@ -19,41 +19,41 @@ return {
 		{
 			Id = "starter_pickaxe", Name = "Starter Pickaxe", MiningPower = 1, Cost = 0, Tier = 1,
 			Visual = {
-				HandleSize     = Vector3.new(0.18, 0.18, 1.3),
+				HandleSize     = Vector3.new(0.28, 0.28, 1.5),
 				HandleColor    = Color3.fromRGB(94, 68, 42),    -- worn dark brown
 				HandleMaterial = Enum.Material.Wood,
-				HeadSize       = Vector3.new(3, 3, 3), -- TEMP DIAGNOSTIC: huge + neon, see if it shows up at all
-				HeadColor      = Color3.fromRGB(255, 0, 255),
-				HeadMaterial   = Enum.Material.Neon,
+				HeadSize       = Vector3.new(0.9, 0.42, 0.42),
+				HeadColor      = Color3.fromRGB(112, 108, 100), -- lighter warm grey -- "dark stone" but still visible against the handle/shadows
+				HeadMaterial   = Enum.Material.Slate,
 				Bands          = {},
 			},
 		},
 		{
 			Id = "iron_pickaxe", Name = "Iron Pickaxe", MiningPower = 2, Cost = 2500, Tier = 2,
 			Visual = {
-				HandleSize     = Vector3.new(0.2, 0.2, 1.4),
+				HandleSize     = Vector3.new(0.3, 0.3, 1.6),
 				HandleColor    = Color3.fromRGB(120, 86, 53),   -- richer polished wood
 				HandleMaterial = Enum.Material.Wood,
-				HeadSize       = Vector3.new(0.95, 0.26, 0.26),
+				HeadSize       = Vector3.new(1.0, 0.46, 0.46),
 				HeadColor      = Color3.fromRGB(170, 170, 175), -- clean silver
 				HeadMaterial   = Enum.Material.Metal,
 				Bands          = {
-					{ Size = Vector3.new(0.08, 0.26, 0.26), Color = Color3.fromRGB(80, 80, 86), Material = Enum.Material.Metal, OffsetZ = -0.25 },
+					{ Size = Vector3.new(0.1, 0.34, 0.34), Color = Color3.fromRGB(80, 80, 86), Material = Enum.Material.Metal, OffsetZ = -0.3 },
 				},
 			},
 		},
 		{
 			Id = "steel_pickaxe", Name = "Steel Pickaxe", MiningPower = 4, Cost = 25000, Tier = 3,
 			Visual = {
-				HandleSize     = Vector3.new(0.22, 0.22, 1.5),
+				HandleSize     = Vector3.new(0.34, 0.34, 1.7),
 				HandleColor    = Color3.fromRGB(55, 55, 60),    -- dark, fully metal-clad
 				HandleMaterial = Enum.Material.Metal,
-				HeadSize       = Vector3.new(1.1, 0.3, 0.28),
-				HeadColor      = Color3.fromRGB(60, 63, 68),    -- dark steel, kept just bright enough to read against shadow
+				HeadSize       = Vector3.new(1.15, 0.5, 0.48),
+				HeadColor      = Color3.fromRGB(70, 74, 80),    -- dark steel, kept just bright enough to read against shadow
 				HeadMaterial   = Enum.Material.DiamondPlate,    -- industrial texture
 				Bands          = {
-					{ Size = Vector3.new(0.08, 0.3, 0.3), Color = Color3.fromRGB(30, 30, 34), Material = Enum.Material.DiamondPlate, OffsetZ = -0.35 },
-					{ Size = Vector3.new(0.08, 0.28, 0.28), Color = Color3.fromRGB(30, 30, 34), Material = Enum.Material.DiamondPlate, OffsetZ = 0.45 },
+					{ Size = Vector3.new(0.1, 0.38, 0.38), Color = Color3.fromRGB(30, 30, 34), Material = Enum.Material.DiamondPlate, OffsetZ = -0.4 },
+					{ Size = Vector3.new(0.1, 0.36, 0.36), Color = Color3.fromRGB(30, 30, 34), Material = Enum.Material.DiamondPlate, OffsetZ = 0.5 },
 				},
 			},
 		},
