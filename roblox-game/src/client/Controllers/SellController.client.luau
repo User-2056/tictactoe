@@ -25,8 +25,8 @@ local ORE_COLOR = {
 	iron  = Color3.fromRGB(180, 130, 100),
 	gold  = Color3.fromRGB(215, 175, 30),
 }
-local ROW_H   = 22
-local ROW_GAP = 6
+local ROW_H   = 20
+local ROW_GAP = 4
 
 -- ── Helper ──────────────────────────────────────────────────────────────────
 
@@ -35,6 +35,21 @@ local function addCorner(inst, r)
 	c.CornerRadius = UDim.new(0, r or 6)
 	c.Parent = inst
 end
+
+local function addStroke(inst, color, thickness, transparency)
+	local s = Instance.new("UIStroke")
+	s.Color = color
+	s.Thickness = thickness or 1
+	s.Transparency = transparency or 0.3
+	s.Parent = inst
+end
+
+-- ── Visual tokens (shared with the shop screen's palette so both dialogs read as one system) ──
+
+local GOLD    = Color3.fromRGB(215, 175, 30)
+local PANEL   = Color3.fromRGB(27, 31, 38)
+local PANEL_2 = Color3.fromRGB(38, 43, 52)
+local BAD     = Color3.fromRGB(168, 54, 54)
 
 -- ── ScreenGui ──────────────────────────────────────────────────────────────
 
@@ -60,35 +75,33 @@ dialog.Name                   = "Dialog"
 dialog.Size                   = UDim2.new(0, 410, 0, 60)
 dialog.AnchorPoint            = Vector2.new(0.5, 0.5)
 dialog.Position               = UDim2.new(0.5, 0, 0.5, 0)
-dialog.BackgroundColor3       = Color3.fromRGB(18, 18, 18)
-dialog.BackgroundTransparency = 0.05
+dialog.BackgroundColor3       = PANEL
 dialog.BorderSizePixel        = 0
 dialog.ZIndex                 = 50
 dialog.Parent                 = sellScreen
 addCorner(dialog, 10)
 
--- Title bar
+-- Title bar -- hairline gold accent instead of a solid block; the dialog's own
+-- background shows through the header, so no corner-masking fill is needed.
 local titleBar                = Instance.new("Frame")
 titleBar.Size                 = UDim2.new(1, 0, 0, 44)
-titleBar.BackgroundColor3     = Color3.fromRGB(200, 145, 15)
-titleBar.BorderSizePixel      = 0
+titleBar.BackgroundTransparency = 1
 titleBar.ZIndex               = 51
 titleBar.Parent               = dialog
-addCorner(titleBar, 10)
 
-local titleFill               = Instance.new("Frame")
-titleFill.Size                = UDim2.new(1, 0, 0, 10)
-titleFill.Position            = UDim2.new(0, 0, 1, -10)
-titleFill.BackgroundColor3    = Color3.fromRGB(200, 145, 15)
-titleFill.BorderSizePixel     = 0
-titleFill.ZIndex              = 51
-titleFill.Parent              = titleBar
+local titleAccent             = Instance.new("Frame")
+titleAccent.Size              = UDim2.new(1, -32, 0, 2)
+titleAccent.Position          = UDim2.new(0, 16, 0, 41)
+titleAccent.BackgroundColor3  = GOLD
+titleAccent.BorderSizePixel   = 0
+titleAccent.ZIndex            = 51
+titleAccent.Parent            = dialog
 
 local titleLabel              = Instance.new("TextLabel")
 titleLabel.Size               = UDim2.new(1, -56, 1, 0)
 titleLabel.Position           = UDim2.new(0, 16, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.TextColor3         = Color3.fromRGB(255, 255, 255)
+titleLabel.TextColor3         = GOLD
 titleLabel.Font               = Enum.Font.GothamBold
 titleLabel.TextSize           = 15
 titleLabel.TextXAlignment     = Enum.TextXAlignment.Left
@@ -99,15 +112,16 @@ titleLabel.Parent             = titleBar
 local closeBtn                = Instance.new("TextButton")
 closeBtn.Size                 = UDim2.new(0, 32, 0, 32)
 closeBtn.Position             = UDim2.new(1, -40, 0.5, -16)
-closeBtn.BackgroundColor3     = Color3.fromRGB(160, 35, 35)
+closeBtn.BackgroundColor3     = PANEL_2
 closeBtn.BorderSizePixel      = 0
-closeBtn.TextColor3           = Color3.fromRGB(255, 255, 255)
+closeBtn.TextColor3           = Color3.fromRGB(214, 130, 130)
 closeBtn.Font                 = Enum.Font.GothamBold
 closeBtn.TextSize             = 16
 closeBtn.Text                 = "✕"
 closeBtn.ZIndex               = 53
 closeBtn.Parent               = titleBar
 addCorner(closeBtn, 6)
+addStroke(closeBtn, BAD, 1.25, 0.2)
 
 -- Content
 local content                 = Instance.new("Frame")
@@ -159,6 +173,7 @@ sellAllBtn.Text               = "SELL ALL"
 sellAllBtn.ZIndex             = 51
 sellAllBtn.Parent             = content
 addCorner(sellAllBtn, 8)
+addStroke(sellAllBtn, Color3.fromRGB(90, 205, 90), 1.25, 0.25)
 
 -- ── Sell sound ─────────────────────────────────────────────────────────────
 
@@ -184,7 +199,7 @@ picker.Name                   = "QtyPicker"
 picker.Size                   = UDim2.new(0, 310, 0, 238)
 picker.AnchorPoint            = Vector2.new(0.5, 0.5)
 picker.Position               = UDim2.new(0.5, 0, 0.5, 0)
-picker.BackgroundColor3       = Color3.fromRGB(22, 22, 22)
+picker.BackgroundColor3       = PANEL_2
 picker.BackgroundTransparency = 0
 picker.BorderSizePixel        = 0
 picker.ZIndex                 = 70
@@ -192,29 +207,29 @@ picker.Visible                = false
 picker.Parent                 = sellScreen
 addCorner(picker, 10)
 
--- Picker title bar
+-- Picker title bar -- same hairline treatment as the main dialog
 local pickerTitleBar          = Instance.new("Frame")
 pickerTitleBar.Size           = UDim2.new(1, 0, 0, 40)
-pickerTitleBar.BackgroundColor3 = Color3.fromRGB(200, 145, 15)
-pickerTitleBar.BorderSizePixel = 0
+pickerTitleBar.BackgroundTransparency = 1
 pickerTitleBar.ZIndex         = 71
 pickerTitleBar.Parent         = picker
-addCorner(pickerTitleBar, 10)
 
-local pickerTitleFill         = Instance.new("Frame")
-pickerTitleFill.Size          = UDim2.new(1, 0, 0, 10)
-pickerTitleFill.Position      = UDim2.new(0, 0, 1, -10)
-pickerTitleFill.BackgroundColor3 = Color3.fromRGB(200, 145, 15)
-pickerTitleFill.BorderSizePixel = 0
-pickerTitleFill.ZIndex        = 71
-pickerTitleFill.Parent        = pickerTitleBar
+local pickerTitleAccent       = Instance.new("Frame")
+pickerTitleAccent.Size        = UDim2.new(1, -24, 0, 2)
+pickerTitleAccent.Position    = UDim2.new(0, 12, 0, 37)
+pickerTitleAccent.BackgroundColor3 = GOLD
+pickerTitleAccent.BorderSizePixel = 0
+pickerTitleAccent.ZIndex      = 71
+pickerTitleAccent.Parent      = picker
 
 local pickerTitle             = Instance.new("TextLabel")
-pickerTitle.Size              = UDim2.new(1, 0, 1, 0)
+pickerTitle.Size              = UDim2.new(1, -24, 1, 0)
+pickerTitle.Position          = UDim2.new(0, 12, 0, 0)
 pickerTitle.BackgroundTransparency = 1
-pickerTitle.TextColor3        = Color3.fromRGB(255, 255, 255)
+pickerTitle.TextColor3        = GOLD
 pickerTitle.Font              = Enum.Font.GothamBold
 pickerTitle.TextSize          = 15
+pickerTitle.TextXAlignment    = Enum.TextXAlignment.Left
 pickerTitle.Text              = "Sell Ore"
 pickerTitle.ZIndex            = 72
 pickerTitle.Parent            = pickerTitleBar
@@ -245,6 +260,7 @@ halfBtn.Text                  = "Half"
 halfBtn.ZIndex                = 71
 halfBtn.Parent                = picker
 addCorner(halfBtn, 6)
+addStroke(halfBtn, Color3.fromRGB(120, 150, 210), 1, 0.3)
 
 local allBtn                  = Instance.new("TextButton")
 allBtn.Size                   = UDim2.new(0, 128, 0, 28)
@@ -258,6 +274,7 @@ allBtn.Text                   = "Select All"
 allBtn.ZIndex                 = 71
 allBtn.Parent                 = picker
 addCorner(allBtn, 6)
+addStroke(allBtn, Color3.fromRGB(120, 150, 210), 1, 0.3)
 
 -- Quantity text box
 local qtyBox                  = Instance.new("TextBox")
@@ -302,6 +319,7 @@ pickerCancelBtn.Text          = "Cancel"
 pickerCancelBtn.ZIndex        = 71
 pickerCancelBtn.Parent        = picker
 addCorner(pickerCancelBtn, 8)
+addStroke(pickerCancelBtn, Color3.fromRGB(190, 90, 90), 1, 0.3)
 
 local pickerConfirmBtn        = Instance.new("TextButton")
 pickerConfirmBtn.Size         = UDim2.new(0, 115, 0, 36)
@@ -315,6 +333,7 @@ pickerConfirmBtn.Text         = "SELL 0"
 pickerConfirmBtn.ZIndex       = 71
 pickerConfirmBtn.Parent       = picker
 addCorner(pickerConfirmBtn, 8)
+addStroke(pickerConfirmBtn, Color3.fromRGB(255, 255, 255), 1, 0.75)
 
 -- ── Picker state ────────────────────────────────────────────────────────────
 
@@ -413,10 +432,20 @@ local function buildContent(items)
 			row.ZIndex              = 52
 			row.Parent              = oreRows
 
+			-- Ore color swatch
+			local swatch             = Instance.new("Frame")
+			swatch.Size              = UDim2.new(0, 10, 0, 10)
+			swatch.Position          = UDim2.new(0, 0, 0.5, -5)
+			swatch.BackgroundColor3  = ORE_COLOR[oreType] or Color3.new(1, 1, 1)
+			swatch.BorderSizePixel   = 0
+			swatch.ZIndex            = 53
+			swatch.Parent            = row
+			addCorner(swatch, 3)
+
 			-- Ore name + quantity
 			local col1              = Instance.new("TextLabel")
-			col1.Size               = UDim2.new(0, 136, 1, 0)
-			col1.Position           = UDim2.new(0, 0, 0, 0)
+			col1.Size               = UDim2.new(0, 120, 1, 0)
+			col1.Position           = UDim2.new(0, 16, 0, 0)
 			col1.BackgroundTransparency = 1
 			col1.TextColor3         = ORE_COLOR[oreType] or Color3.new(1,1,1)
 			col1.Font               = Enum.Font.GothamBold
@@ -465,6 +494,7 @@ local function buildContent(items)
 			sellRowBtn.ZIndex       = 53
 			sellRowBtn.Parent       = row
 			addCorner(sellRowBtn, 4)
+			addStroke(sellRowBtn, Color3.fromRGB(120, 160, 220), 1, 0.3)
 
 			local capturedType = oreType
 			sellRowBtn.MouseButton1Click:Connect(function()
