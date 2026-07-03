@@ -18,6 +18,8 @@ return {
 	Pickaxes = {
 		{
 			Id = "starter_pickaxe", Name = "Starter Pickaxe", MiningPower = 1, Cost = 0, Tier = 1,
+			Rarity = "Common", SwingSpeed = 1.6,
+			Description = "A basic pickaxe issued to every new miner. Gets the job done.",
 			Visual = {
 				HandleSize     = Vector3.new(0.35, 0.35, 1.6),
 				HandleColor    = Color3.fromRGB(94, 68, 42),    -- worn dark brown
@@ -30,6 +32,8 @@ return {
 		},
 		{
 			Id = "iron_pickaxe", Name = "Iron Pickaxe", MiningPower = 2, Cost = 2500, Tier = 2,
+			Rarity = "Uncommon", SwingSpeed = 1.4,
+			Description = "Sturdier and sharper than the starter pickaxe. A solid upgrade for steady progress.",
 			Visual = {
 				HandleSize     = Vector3.new(0.38, 0.38, 1.7),
 				HandleColor    = Color3.fromRGB(150, 105, 55),  -- noticeably lighter/more golden than Starter's dark worn brown
@@ -44,6 +48,8 @@ return {
 		},
 		{
 			Id = "steel_pickaxe", Name = "Steel Pickaxe", MiningPower = 4, Cost = 25000, Tier = 3,
+			Rarity = "Rare", SwingSpeed = 1.2,
+			Description = "Reinforced steel head that swings harder and faster. Built for serious miners.",
 			Visual = {
 				HandleSize     = Vector3.new(0.42, 0.42, 1.8),
 				HandleColor    = Color3.fromRGB(55, 55, 60),    -- dark, fully metal-clad
@@ -59,9 +65,13 @@ return {
 		},
 	},
 	Backpacks = {
-		{ Id = "starter_backpack",    Name = "Starter Backpack",    Capacity = 100,  Cost = 0,     Tier = 1 },
-		{ Id = "small_backpack",      Name = "Small Backpack",      Capacity = 250,  Cost = 1500,  Tier = 2 },
-		{ Id = "miner_backpack",      Name = "Miner's Backpack",    Capacity = 500,  Cost = 7500,  Tier = 3 },
-		{ Id = "industrial_backpack", Name = "Industrial Backpack", Capacity = 1000, Cost = 35000, Tier = 4 },
+		{ Id = "starter_backpack",    Name = "Starter Backpack",    Capacity = 100,  Cost = 0,     Tier = 1,
+			Rarity = "Common", Description = "A small canvas sack. Fine for a quick trip, cramped for a real haul." },
+		{ Id = "small_backpack",      Name = "Small Backpack",      Capacity = 250,  Cost = 1500,  Tier = 2,
+			Rarity = "Uncommon", Description = "Extra pockets add meaningful carry capacity without slowing you down." },
+		{ Id = "miner_backpack",      Name = "Miner's Backpack",    Capacity = 500,  Cost = 7500,  Tier = 3,
+			Rarity = "Rare", Description = "A rugged frame pack built for full shifts underground." },
+		{ Id = "industrial_backpack", Name = "Industrial Backpack", Capacity = 1000, Cost = 35000, Tier = 4,
+			Rarity = "Epic", Description = "Heavy-duty industrial rig for hauling massive loads back to the surface." },
 	},
 }

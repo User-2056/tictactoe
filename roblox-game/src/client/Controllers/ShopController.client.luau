@@ -69,6 +69,17 @@ local GREEN   = Color3.fromRGB(76, 175, 80)   -- #4CAF50
 local WHITE   = Color3.fromRGB(255, 255, 255)
 local LIGHT   = Color3.fromRGB(176, 184, 193) -- #B0B8C1
 local RED     = Color3.fromRGB(217, 83, 79)   -- #D9534F
+local BLUE    = Color3.fromRGB(93, 173, 226)  -- #5DADE2
+local PURPLE  = Color3.fromRGB(155, 89, 182)
+
+-- Gameplay rarity (separate from an item's physical tierColor, which drives the
+-- icon/list-row accents) -- one consistent ramp across pickaxes and backpacks.
+local RARITY_COLOR = {
+	Common    = LIGHT,
+	Uncommon  = GREEN,
+	Rare      = BLUE,
+	Epic      = PURPLE,
+}
 
 -- Backpacks have no Visual table to draw a tier color from (pickaxes do -- see
 -- below), so this ramp stands in for one: grey -> bronze -> silver -> gold.
@@ -322,8 +333,8 @@ previewName.ZIndex               = 53
 previewName.Parent               = preview
 
 local previewTier                 = Instance.new("TextLabel")
-previewTier.Size                  = UDim2.new(0, 80, 0, 20)
-previewTier.Position              = UDim2.new(0.5, -40, 0, 130)
+previewTier.Size                  = UDim2.new(0, 84, 0, 18)
+previewTier.Position              = UDim2.new(0.5, -42, 0, 124)
 previewTier.BorderSizePixel       = 0
 previewTier.Font                  = Enum.Font.GothamBold
 previewTier.TextSize              = 11
@@ -333,23 +344,49 @@ previewTier.TextStrokeTransparency = 0.4
 previewTier.Text                  = ""
 previewTier.ZIndex                = 53
 previewTier.Parent                = preview
-addCorner(previewTier, 10)
+addCorner(previewTier, 9)
+
+local previewDescription           = Instance.new("TextLabel")
+previewDescription.Size            = UDim2.new(1, -24, 0, 44)
+previewDescription.Position        = UDim2.new(0, 12, 0, 148)
+previewDescription.BackgroundTransparency = 1
+previewDescription.Font            = Enum.Font.Gotham
+previewDescription.TextSize        = 12
+previewDescription.TextColor3      = LIGHT
+previewDescription.TextXAlignment  = Enum.TextXAlignment.Left
+previewDescription.TextYAlignment  = Enum.TextYAlignment.Top
+previewDescription.TextWrapped     = true
+previewDescription.Text            = ""
+previewDescription.ZIndex          = 53
+previewDescription.Parent          = preview
 
 local previewStat                 = Instance.new("TextLabel")
-previewStat.Size                  = UDim2.new(1, -24, 0, 20)
-previewStat.Position              = UDim2.new(0, 12, 0, 160)
+previewStat.Size                  = UDim2.new(1, -24, 0, 18)
+previewStat.Position              = UDim2.new(0, 12, 0, 196)
 previewStat.BackgroundTransparency = 1
-previewStat.Font                  = Enum.Font.Gotham
+previewStat.Font                  = Enum.Font.GothamBold
 previewStat.TextSize              = 13
-previewStat.TextColor3            = LIGHT
-previewStat.TextXAlignment        = Enum.TextXAlignment.Center
+previewStat.TextColor3            = WHITE
+previewStat.TextXAlignment        = Enum.TextXAlignment.Left
 previewStat.Text                  = ""
 previewStat.ZIndex                = 53
 previewStat.Parent                = preview
 
+local previewStat2                 = Instance.new("TextLabel")
+previewStat2.Size                  = UDim2.new(1, -24, 0, 18)
+previewStat2.Position              = UDim2.new(0, 12, 0, 216)
+previewStat2.BackgroundTransparency = 1
+previewStat2.Font                  = Enum.Font.GothamBold
+previewStat2.TextSize              = 13
+previewStat2.TextColor3            = WHITE
+previewStat2.TextXAlignment        = Enum.TextXAlignment.Left
+previewStat2.Text                  = ""
+previewStat2.ZIndex                = 53
+previewStat2.Parent                = preview
+
 local previewDivider               = Instance.new("Frame")
 previewDivider.Size                = UDim2.new(1, -24, 0, 1)
-previewDivider.Position            = UDim2.new(0, 12, 0, 196)
+previewDivider.Position            = UDim2.new(0, 12, 0, 242)
 previewDivider.BackgroundColor3    = BORDER
 previewDivider.BorderSizePixel     = 0
 previewDivider.ZIndex              = 53
@@ -357,7 +394,7 @@ previewDivider.Parent              = preview
 
 local previewPrice                 = Instance.new("TextLabel")
 previewPrice.Size                  = UDim2.new(1, -24, 0, 26)
-previewPrice.Position              = UDim2.new(0, 12, 0, 212)
+previewPrice.Position              = UDim2.new(0, 12, 0, 256)
 previewPrice.BackgroundTransparency = 1
 previewPrice.Font                  = Enum.Font.GothamBold
 previewPrice.TextSize              = 20
@@ -369,7 +406,7 @@ previewPrice.Parent                = preview
 
 local previewActionBtn             = Instance.new("TextButton")
 previewActionBtn.Size              = UDim2.new(1, -24, 0, 36)
-previewActionBtn.Position          = UDim2.new(0, 12, 0, 246)
+previewActionBtn.Position          = UDim2.new(0, 12, 0, 290)
 previewActionBtn.BorderSizePixel   = 0
 previewActionBtn.Font              = Enum.Font.GothamBold
 previewActionBtn.TextSize          = 14
@@ -480,13 +517,17 @@ refreshPreview = function()
 	buildIcon(previewIconHolder, selectedType, tierColor)
 
 	previewName.Text        = item.Name
-	previewTier.Text         = "TIER " .. tostring(item.Tier)
-	previewTier.BackgroundColor3 = tierColor
+	previewTier.Text         = item.Rarity or "Common"
+	previewTier.BackgroundColor3 = RARITY_COLOR[item.Rarity] or LIGHT
+
+	previewDescription.Text = item.Description or ""
 
 	if selectedType == "pickaxe" then
-		previewStat.Text = string.format("Mining Power  ×%d", item.MiningPower)
+		previewStat.Text  = string.format("Mining Power   ×%d", item.MiningPower)
+		previewStat2.Text = item.SwingSpeed and string.format("Swing Speed   %.1fs", item.SwingSpeed) or ""
 	else
-		previewStat.Text = string.format("Capacity  %d kg", item.Capacity)
+		previewStat.Text  = string.format("Capacity   %d kg", item.Capacity)
+		previewStat2.Text = ""
 	end
 
 	local isEquipped = (selectedType == "pickaxe"  and equippedPickaxeId  == item.Id)
