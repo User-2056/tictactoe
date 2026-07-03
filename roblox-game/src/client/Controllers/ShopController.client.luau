@@ -1,6 +1,8 @@
 -- ShopController: Frontier Mining Supplies shop — opened by ProximityPrompt on the kiosk.
 -- Reads EquipmentConfig from ReplicatedStorage for display; fires PurchaseEquipment to server.
--- Refreshes buy-button states automatically when Eq_Update or Eco_CreditsUpdate arrive.
+-- Layout: category sidebar (Pickaxes/Backpacks) -> item list -> selected-item preview pane
+-- with the purchase/equip action, matching the reference board's shop mockup.
+-- Refreshes automatically when Eq_Update or Eco_CreditsUpdate arrive.
 
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,6 +29,13 @@ local ownedBackpacks     = { ["starter_backpack"] = true }
 local pendingPurchaseId  = nil   -- set when purchase fires; cleared when Eq_Update confirms it
 local isShopOpen         = false
 
+local selectedType = "pickaxe"
+local selectedItem = EquipmentConfig.Pickaxes[1]
+
+-- Forward-declared: makeTab/makeListRow's click handlers reference these before
+-- they're assigned below, and selectItem/selectCategory call each other.
+local refreshPreview, refreshList, selectItem, selectCategory
+
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
 local function addCorner(inst, r)
@@ -35,20 +44,34 @@ local function addCorner(inst, r)
 	c.Parent          = inst
 end
 
+local function addStroke(inst, color, thickness, transparency)
+	local s = Instance.new("UIStroke")
+	s.Color = color
+	s.Thickness = thickness or 1
+	s.Transparency = transparency or 0.3
+	s.Parent = inst
+end
+
 local function fmtNum(n)
 	local s = tostring(math.floor(n)):reverse()
 	return (s:gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""))
 end
 
--- ── Visual tokens (shared with the sell screen's palette so both dialogs read as one system) ──
+-- ── Visual tokens ────────────────────────────────────────────────────────────
+-- Exact hex from the reference board's style guide -- shared with SellController
+-- so both dialogs read as one system.
 
-local GOLD    = Color3.fromRGB(215, 175, 30)
-local PANEL   = Color3.fromRGB(27, 31, 38)
-local PANEL_2 = Color3.fromRGB(38, 43, 52)
-local BAD     = Color3.fromRGB(168, 54, 54)
+local PANEL   = Color3.fromRGB(30, 35, 43)    -- #1E232B
+local PANEL_2 = Color3.fromRGB(44, 49, 58)    -- #2C313A
+local BORDER  = Color3.fromRGB(62, 68, 77)    -- #3E444D
+local GOLD    = Color3.fromRGB(255, 193, 7)   -- #FFC107
+local GREEN   = Color3.fromRGB(76, 175, 80)   -- #4CAF50
+local WHITE   = Color3.fromRGB(255, 255, 255)
+local LIGHT   = Color3.fromRGB(176, 184, 193) -- #B0B8C1
+local RED     = Color3.fromRGB(217, 83, 79)   -- #D9534F
 
--- Backpacks have no Visual table to draw a tier color from (pickaxes do -- see below),
--- so this ramp stands in for one: grey -> bronze -> silver -> gold as Tier climbs.
+-- Backpacks have no Visual table to draw a tier color from (pickaxes do -- see
+-- below), so this ramp stands in for one: grey -> bronze -> silver -> gold.
 local BACKPACK_TIER_COLOR = {
 	[1] = Color3.fromRGB(140, 140, 148),
 	[2] = Color3.fromRGB(176, 124, 62),
@@ -58,11 +81,80 @@ local BACKPACK_TIER_COLOR = {
 
 local function getTierColor(itemType, item)
 	if itemType == "pickaxe" then
-		-- Reuse the pickaxe's own HeadColor so the card border always matches the
+		-- Reuse the pickaxe's own HeadColor so the tag/icon always matches the
 		-- tool you'd actually be holding -- no separate ramp to keep in sync.
 		return (item.Visual and item.Visual.HeadColor) or Color3.fromRGB(160, 160, 170)
 	end
 	return BACKPACK_TIER_COLOR[item.Tier] or Color3.fromRGB(160, 160, 170)
+end
+
+-- Procedural silhouette (pickaxe cross / backpack body+flap), sized as a
+-- fraction of whatever container it's given so it works at badge or hero scale.
+local function buildIcon(container, itemType, color)
+	local parts = {}
+	if itemType == "pickaxe" then
+		local handle = Instance.new("Frame")
+		handle.Size         = UDim2.new(0.16, 0, 0.62, 0)
+		handle.AnchorPoint   = Vector2.new(0.5, 0.5)
+		handle.Position      = UDim2.new(0.58, 0, 0.56, 0)
+		handle.Rotation      = 45
+		handle.BackgroundColor3 = color
+		handle.BorderSizePixel  = 0
+		handle.ZIndex        = 56
+		handle.Parent         = container
+		addCorner(handle, 2)
+		table.insert(parts, handle)
+
+		local head = Instance.new("Frame")
+		head.Size         = UDim2.new(0.16, 0, 0.4, 0)
+		head.AnchorPoint   = Vector2.new(0.5, 0.5)
+		head.Position      = UDim2.new(0.4, 0, 0.32, 0)
+		head.Rotation      = -45
+		head.BackgroundColor3 = color
+		head.BorderSizePixel  = 0
+		head.ZIndex        = 56
+		head.Parent         = container
+		addCorner(head, 2)
+		table.insert(parts, head)
+	else
+		local body = Instance.new("Frame")
+		body.Size         = UDim2.new(0.5, 0, 0.44, 0)
+		body.AnchorPoint   = Vector2.new(0.5, 0.5)
+		body.Position      = UDim2.new(0.5, 0, 0.58, 0)
+		body.BackgroundColor3 = color
+		body.BorderSizePixel  = 0
+		body.ZIndex        = 56
+		body.Parent         = container
+		addCorner(body, 4)
+		table.insert(parts, body)
+
+		local flap = Instance.new("Frame")
+		flap.Size         = UDim2.new(0.32, 0, 0.26, 0)
+		flap.AnchorPoint   = Vector2.new(0.5, 0.5)
+		flap.Position      = UDim2.new(0.5, 0, 0.28, 0)
+		flap.BackgroundColor3 = color
+		flap.BorderSizePixel  = 0
+		flap.ZIndex        = 56
+		flap.Parent         = container
+		addCorner(flap, 3)
+		table.insert(parts, flap)
+	end
+	return parts
+end
+
+local function makeIconBadge(parent, size, position, itemType, color)
+	local badge = Instance.new("Frame")
+	badge.Size               = size
+	badge.Position           = position
+	badge.BackgroundColor3   = color
+	badge.BackgroundTransparency = 0.8
+	badge.BorderSizePixel    = 0
+	badge.ZIndex             = 54
+	badge.Parent             = parent
+	addCorner(badge, 8)
+	addStroke(badge, color, 1, 0.4)
+	buildIcon(badge, itemType, color)
+	return badge
 end
 
 -- ── Build ScreenGui ───────────────────────────────────────────────────────────
@@ -88,62 +180,40 @@ dim.Parent                    = shopScreen
 -- Main dialog
 local dialog                  = Instance.new("Frame")
 dialog.Name                   = "Dialog"
-dialog.Size                   = UDim2.new(0, 680, 0, 440)
-dialog.Position               = UDim2.new(0.5, -340, 0.5, -220)
+dialog.Size                   = UDim2.new(0, 760, 0, 480)
+dialog.Position               = UDim2.new(0.5, -380, 0.5, -240)
 dialog.BackgroundColor3       = PANEL
 dialog.BorderSizePixel        = 0
 dialog.ZIndex                 = 51
 dialog.Parent                 = shopScreen
-addCorner(dialog, 10)
+addCorner(dialog, 12)
+addStroke(dialog, BORDER, 1, 0.4)
 
--- Title bar -- hairline gold accent instead of a solid block. The dialog's own
--- background shows through the header, so no corner-masking hack is needed.
-local titleBar                = Instance.new("Frame")
-titleBar.Name                 = "TitleBar"
-titleBar.Size                 = UDim2.new(1, 0, 0, 48)
-titleBar.BackgroundTransparency = 1
-titleBar.ZIndex               = 52
-titleBar.Parent               = dialog
-
-local titleAccent             = Instance.new("Frame")
-titleAccent.Name              = "TitleAccent"
-titleAccent.Size              = UDim2.new(1, -32, 0, 2)
-titleAccent.Position          = UDim2.new(0, 16, 0, 46)
-titleAccent.BackgroundColor3  = GOLD
-titleAccent.BorderSizePixel   = 0
-titleAccent.ZIndex            = 52
-titleAccent.Parent            = dialog
-
+-- Header: title text directly on the panel + a solid red close button
 local titleLabel              = Instance.new("TextLabel")
-titleLabel.Size               = UDim2.new(1, -56, 1, 0)
-titleLabel.Position           = UDim2.new(0, 16, 0, 0)
+titleLabel.Size               = UDim2.new(1, -56, 0, 24)
+titleLabel.Position           = UDim2.new(0, 16, 0, 16)
 titleLabel.BackgroundTransparency = 1
-titleLabel.TextColor3         = GOLD
+titleLabel.TextColor3         = WHITE
 titleLabel.Font               = Enum.Font.GothamBold
 titleLabel.TextSize           = 17
 titleLabel.Text               = "FRONTIER MINING SUPPLIES"
 titleLabel.TextXAlignment     = Enum.TextXAlignment.Left
-titleLabel.ZIndex             = 53
-titleLabel.Parent             = titleBar
+titleLabel.ZIndex             = 52
+titleLabel.Parent             = dialog
 
 local closeBtn                = Instance.new("TextButton")
 closeBtn.Name                 = "CloseBtn"
-closeBtn.Size                 = UDim2.new(0, 34, 0, 34)
-closeBtn.Position             = UDim2.new(1, -42, 0.5, -17)
-closeBtn.BackgroundColor3     = PANEL_2
+closeBtn.Size                 = UDim2.new(0, 28, 0, 28)
+closeBtn.Position             = UDim2.new(1, -44, 0, 16)
+closeBtn.BackgroundColor3     = RED
 closeBtn.Text                 = "✕"
-closeBtn.TextColor3           = Color3.fromRGB(214, 130, 130)
+closeBtn.TextColor3           = WHITE
 closeBtn.Font                 = Enum.Font.GothamBold
-closeBtn.TextSize             = 15
-closeBtn.ZIndex               = 54
-closeBtn.Parent               = titleBar
+closeBtn.TextSize             = 14
+closeBtn.ZIndex               = 52
+closeBtn.Parent               = dialog
 addCorner(closeBtn, 6)
-
-local closeBtnStroke          = Instance.new("UIStroke")
-closeBtnStroke.Color          = BAD
-closeBtnStroke.Thickness      = 1.25
-closeBtnStroke.Transparency   = 0.2
-closeBtnStroke.Parent         = closeBtn
 
 -- Upgrade confirmation sound (short positive chime)
 local upgradeSound            = Instance.new("Sound")
@@ -151,319 +221,405 @@ upgradeSound.SoundId          = "rbxassetid://104144989520923"
 upgradeSound.Volume           = 0.7
 upgradeSound.Parent           = shopScreen
 
--- ── Two-column content area ───────────────────────────────────────────────────
+-- ── Three-column content area: sidebar | preview | list ───────────────────────
 
-local CONTENT_TOP = 56   -- pixels below top of dialog (below title bar + gap)
-local COL_W       = 308
-local ITEM_H      = 80
-local ITEM_GAP    = 6
-local SECTION_H   = 34
-local COL_PAD     = 14
+local CONTENT_TOP = 56
+local SIDEBAR_W   = 116
+local PREVIEW_W   = 268
+local COL_GAP     = 16
+local OUTER_PAD   = 16
 
--- Left column — Pickaxes
-local leftCol                 = Instance.new("Frame")
-leftCol.Name                  = "PickaxeCol"
-leftCol.Size                  = UDim2.new(0, COL_W, 1, -CONTENT_TOP - 12)
-leftCol.Position              = UDim2.new(0, COL_PAD, 0, CONTENT_TOP)
-leftCol.BackgroundTransparency = 1
-leftCol.ZIndex                = 52
-leftCol.Parent                = dialog
+-- Sidebar — category tabs
+local sidebar                 = Instance.new("Frame")
+sidebar.Name                  = "Sidebar"
+sidebar.Size                  = UDim2.new(0, SIDEBAR_W, 1, -CONTENT_TOP - OUTER_PAD)
+sidebar.Position               = UDim2.new(0, OUTER_PAD, 0, CONTENT_TOP)
+sidebar.BackgroundTransparency = 1
+sidebar.ZIndex                 = 52
+sidebar.Parent                 = dialog
 
-local pickaxeHeader           = Instance.new("TextLabel")
-pickaxeHeader.Size            = UDim2.new(1, 0, 0, SECTION_H)
-pickaxeHeader.BackgroundTransparency = 1
-pickaxeHeader.TextColor3      = Color3.fromRGB(215, 175, 30)
-pickaxeHeader.Font            = Enum.Font.GothamBold
-pickaxeHeader.TextSize        = 13
-pickaxeHeader.Text            = "PICKAXES"
-pickaxeHeader.TextXAlignment  = Enum.TextXAlignment.Left
-pickaxeHeader.ZIndex          = 52
-pickaxeHeader.Parent          = leftCol
+local sidebarLayout            = Instance.new("UIListLayout")
+sidebarLayout.SortOrder        = Enum.SortOrder.LayoutOrder
+sidebarLayout.Padding          = UDim.new(0, 8)
+sidebarLayout.Parent           = sidebar
 
-local pickaxeList             = Instance.new("Frame")
-pickaxeList.Name              = "PickaxeList"
-pickaxeList.Size              = UDim2.new(1, 0, 1, -SECTION_H)
-pickaxeList.Position          = UDim2.new(0, 0, 0, SECTION_H)
-pickaxeList.BackgroundTransparency = 1
-pickaxeList.ZIndex            = 52
-pickaxeList.Parent            = leftCol
+local tabs = {}   -- itemType -> { frame, label, iconParts }
 
-local pickaxeLayout           = Instance.new("UIListLayout")
-pickaxeLayout.SortOrder       = Enum.SortOrder.LayoutOrder
-pickaxeLayout.Padding         = UDim.new(0, ITEM_GAP)
-pickaxeLayout.Parent          = pickaxeList
+local function makeTab(itemType, label, order)
+	local tab              = Instance.new("Frame")
+	tab.Name                = itemType .. "Tab"
+	tab.Size                = UDim2.new(1, 0, 0, 44)
+	tab.BackgroundColor3    = PANEL_2
+	tab.BorderSizePixel     = 0
+	tab.LayoutOrder         = order
+	tab.ZIndex              = 52
+	tab.Parent               = sidebar
+	addCorner(tab, 8)
 
--- Vertical divider
-local divider                 = Instance.new("Frame")
-divider.Name                  = "Divider"
-divider.Size                  = UDim2.new(0, 2, 1, -CONTENT_TOP - 20)
-divider.Position              = UDim2.new(0, COL_PAD + COL_W + 7, 0, CONTENT_TOP + 8)
-divider.BackgroundColor3      = Color3.fromRGB(55, 55, 65)
-divider.BorderSizePixel       = 0
-divider.ZIndex                = 52
-divider.Parent                = dialog
+	local iconHolder         = Instance.new("Frame")
+	iconHolder.Size          = UDim2.new(0, 20, 0, 20)
+	iconHolder.Position      = UDim2.new(0, 12, 0.5, -10)
+	iconHolder.BackgroundTransparency = 1
+	iconHolder.ZIndex        = 53
+	iconHolder.Parent        = tab
 
--- Right column — Backpacks
-local rightCol                = Instance.new("Frame")
-rightCol.Name                 = "BackpackCol"
-rightCol.Size                 = UDim2.new(0, COL_W, 1, -CONTENT_TOP - 12)
-rightCol.Position             = UDim2.new(0, COL_PAD + COL_W + 18, 0, CONTENT_TOP)
-rightCol.BackgroundTransparency = 1
-rightCol.ZIndex               = 52
-rightCol.Parent               = dialog
+	local iconParts = buildIcon(iconHolder, itemType, LIGHT)
 
-local backpackHeader          = Instance.new("TextLabel")
-backpackHeader.Size           = UDim2.new(1, 0, 0, SECTION_H)
-backpackHeader.BackgroundTransparency = 1
-backpackHeader.TextColor3     = Color3.fromRGB(215, 175, 30)
-backpackHeader.Font           = Enum.Font.GothamBold
-backpackHeader.TextSize       = 13
-backpackHeader.Text           = "BACKPACKS"
-backpackHeader.TextXAlignment = Enum.TextXAlignment.Left
-backpackHeader.ZIndex         = 52
-backpackHeader.Parent         = rightCol
+	local lbl                = Instance.new("TextLabel")
+	lbl.Size                 = UDim2.new(1, -40, 1, 0)
+	lbl.Position              = UDim2.new(0, 40, 0, 0)
+	lbl.BackgroundTransparency = 1
+	lbl.TextColor3            = LIGHT
+	lbl.Font                  = Enum.Font.GothamBold
+	lbl.TextSize               = 13
+	lbl.TextXAlignment         = Enum.TextXAlignment.Left
+	lbl.Text                   = label
+	lbl.ZIndex                 = 53
+	lbl.Parent                 = tab
 
-local backpackList            = Instance.new("Frame")
-backpackList.Name             = "BackpackList"
-backpackList.Size             = UDim2.new(1, 0, 1, -SECTION_H)
-backpackList.Position         = UDim2.new(0, 0, 0, SECTION_H)
-backpackList.BackgroundTransparency = 1
-backpackList.ZIndex           = 52
-backpackList.Parent           = rightCol
+	local btn                 = Instance.new("TextButton")
+	btn.Size                  = UDim2.new(1, 0, 1, 0)
+	btn.BackgroundTransparency = 1
+	btn.Text                   = ""
+	btn.ZIndex                 = 54
+	btn.Parent                 = tab
 
-local backpackLayout          = Instance.new("UIListLayout")
-backpackLayout.SortOrder      = Enum.SortOrder.LayoutOrder
-backpackLayout.Padding        = UDim.new(0, ITEM_GAP)
-backpackLayout.Parent         = backpackList
-
--- ── Item card builder ─────────────────────────────────────────────────────────
-
-local itemEntries = {}   -- { btn, itemType, item } for refreshButtons()
-
-local function makeItemCard(parent, itemType, item, order)
-	local card                    = Instance.new("Frame")
-	card.Name                     = item.Id
-	card.Size                     = UDim2.new(1, 0, 0, ITEM_H)
-	card.BackgroundColor3         = Color3.fromRGB(36, 36, 46)
-	card.BorderSizePixel          = 0
-	card.LayoutOrder              = order
-	card.ZIndex                   = 53
-	card.Parent                   = parent
-	addCorner(card, 7)
-
-	local tierColor               = getTierColor(itemType, item)
-
-	-- Left-edge tier border -- bronze/steel/titanium-equivalent read at a glance
-	local tierEdge                = Instance.new("Frame")
-	tierEdge.Name                  = "TierEdge"
-	tierEdge.Size                  = UDim2.new(0, 4, 1, 0)
-	tierEdge.BackgroundColor3      = tierColor
-	tierEdge.BorderSizePixel       = 0
-	tierEdge.ZIndex                = 54
-	tierEdge.Parent                = card
-	addCorner(tierEdge, 3)
-
-	-- Item icon -- procedural silhouette (pickaxe cross / backpack body+flap) in the
-	-- tier color, same technique as the hard hat's welded parts, just 2D this time
-	local icon                    = Instance.new("Frame")
-	icon.Name                     = "Icon"
-	icon.Size                     = UDim2.new(0, 32, 0, 32)
-	icon.Position                 = UDim2.new(0, 10, 0, (ITEM_H - 32) / 2)
-	icon.BackgroundColor3         = tierColor
-	icon.BackgroundTransparency   = 0.82
-	icon.BorderSizePixel          = 0
-	icon.ZIndex                   = 54
-	icon.Parent                   = card
-	addCorner(icon, 7)
-
-	local iconStroke               = Instance.new("UIStroke")
-	iconStroke.Color               = tierColor
-	iconStroke.Thickness           = 1
-	iconStroke.Transparency        = 0.35
-	iconStroke.Parent              = icon
-
-	if itemType == "pickaxe" then
-		local handle               = Instance.new("Frame")
-		handle.Size                = UDim2.new(0, 4, 0, 22)
-		handle.AnchorPoint         = Vector2.new(0.5, 0.5)
-		handle.Position            = UDim2.new(0.5, 2, 0.5, 3)
-		handle.Rotation            = 45
-		handle.BackgroundColor3    = tierColor
-		handle.BorderSizePixel     = 0
-		handle.ZIndex              = 55
-		handle.Parent              = icon
-		addCorner(handle, 2)
-
-		local head                 = Instance.new("Frame")
-		head.Size                  = UDim2.new(0, 4, 0, 13)
-		head.AnchorPoint           = Vector2.new(0.5, 0.5)
-		head.Position              = UDim2.new(0.5, -4, 0.5, -6)
-		head.Rotation              = -45
-		head.BackgroundColor3      = tierColor
-		head.BorderSizePixel       = 0
-		head.ZIndex                = 55
-		head.Parent                = icon
-		addCorner(head, 2)
-	else
-		local body                 = Instance.new("Frame")
-		body.Size                  = UDim2.new(0, 16, 0, 14)
-		body.AnchorPoint           = Vector2.new(0.5, 0.5)
-		body.Position              = UDim2.new(0.5, 0, 0.5, 5)
-		body.BackgroundColor3      = tierColor
-		body.BorderSizePixel       = 0
-		body.ZIndex                = 55
-		body.Parent                = icon
-		addCorner(body, 4)
-
-		local flap                 = Instance.new("Frame")
-		flap.Size                  = UDim2.new(0, 10, 0, 8)
-		flap.AnchorPoint           = Vector2.new(0.5, 0.5)
-		flap.Position              = UDim2.new(0.5, 0, 0.5, -8)
-		flap.BackgroundColor3      = tierColor
-		flap.BorderSizePixel       = 0
-		flap.ZIndex                = 55
-		flap.Parent                = icon
-		addCorner(flap, 3)
-	end
-
-	-- Item name (top-left, shifted right to clear the icon)
-	local nameLabel               = Instance.new("TextLabel")
-	nameLabel.Size                = UDim2.new(1, -142, 0, 22)
-	nameLabel.Position            = UDim2.new(0, 50, 0, 10)
-	nameLabel.BackgroundTransparency = 1
-	nameLabel.TextColor3          = Color3.fromRGB(240, 240, 240)
-	nameLabel.Font                = Enum.Font.GothamBold
-	nameLabel.TextSize            = 14
-	nameLabel.Text                = item.Name
-	nameLabel.TextXAlignment      = Enum.TextXAlignment.Left
-	nameLabel.ZIndex              = 54
-	nameLabel.Parent              = card
-
-	-- Stat (bottom-left, shifted right to clear the icon)
-	local statLabel               = Instance.new("TextLabel")
-	statLabel.Size                = UDim2.new(1, -142, 0, 18)
-	statLabel.Position            = UDim2.new(0, 50, 0, 36)
-	statLabel.BackgroundTransparency = 1
-	statLabel.Font                = Enum.Font.Gotham
-	statLabel.TextSize            = 12
-	statLabel.TextXAlignment      = Enum.TextXAlignment.Left
-	statLabel.ZIndex              = 54
-	statLabel.Parent              = card
-
-	if itemType == "pickaxe" then
-		statLabel.TextColor3 = Color3.fromRGB(163, 162, 165)
-		statLabel.Text = string.format("Mining Power  ×%d", item.MiningPower)
-	else
-		statLabel.TextColor3 = Color3.fromRGB(100, 180, 240)
-		statLabel.Text = string.format("Capacity  %d kg", item.Capacity)
-	end
-
-	-- Price (top-right)
-	local priceLabel              = Instance.new("TextLabel")
-	priceLabel.Name               = "Price"
-	priceLabel.Size               = UDim2.new(0, 90, 0, 22)
-	priceLabel.Position           = UDim2.new(1, -102, 0, 10)
-	priceLabel.BackgroundTransparency = 1
-	priceLabel.Font               = Enum.Font.GothamBold
-	priceLabel.TextSize           = 13
-	priceLabel.TextXAlignment     = Enum.TextXAlignment.Right
-	priceLabel.ZIndex             = 54
-	priceLabel.Parent             = card
-
-	if item.Cost == 0 then
-		priceLabel.TextColor3 = Color3.fromRGB(100, 210, 100)
-		priceLabel.Text       = "Free"
-	else
-		priceLabel.TextColor3 = Color3.fromRGB(215, 175, 30)
-		priceLabel.Text       = "₡" .. fmtNum(item.Cost)
-	end
-
-	-- Buy / Equipped button (bottom-right)
-	local btn                     = Instance.new("TextButton")
-	btn.Name                      = "BuyBtn"
-	btn.Size                      = UDim2.new(0, 90, 0, 28)
-	btn.Position                  = UDim2.new(1, -102, 0, 40)
-	btn.BorderSizePixel           = 0
-	btn.Font                      = Enum.Font.GothamBold
-	btn.TextSize                  = 12
-	btn.ZIndex                    = 54
-	btn.Parent                    = card
-	addCorner(btn, 6)
-
-	local capturedType = itemType
-	local capturedItem = item
+	tabs[itemType] = { frame = tab, label = lbl, iconParts = iconParts }
 	btn.MouseButton1Click:Connect(function()
-		local isEquipped = (capturedType == "pickaxe"  and equippedPickaxeId  == capturedItem.Id)
-		               or  (capturedType == "backpack" and equippedBackpackId == capturedItem.Id)
-		if isEquipped then return end
-
-		local isOwned = (capturedType == "pickaxe"  and ownedPickaxes[capturedItem.Id])
-		            or  (capturedType == "backpack" and ownedBackpacks[capturedItem.Id])
-
-		if isOwned then
-			EquipItem:FireServer(capturedType, capturedItem.Id)
-		else
-			if cachedBalance < capturedItem.Cost then return end
-			pendingPurchaseId = capturedItem.Id
-			PurchaseEquipment:FireServer(capturedType, capturedItem.Id)
-		end
+		selectCategory(itemType)
 	end)
-
-	table.insert(itemEntries, { btn = btn, priceLabel = priceLabel, itemType = itemType, item = item })
 end
 
--- Build all cards
-for i, p in ipairs(EquipmentConfig.Pickaxes)  do makeItemCard(pickaxeList,  "pickaxe",  p, i) end
-for i, b in ipairs(EquipmentConfig.Backpacks) do makeItemCard(backpackList, "backpack", b, i) end
+-- Preview pane — selected item's hero card
+local preview                  = Instance.new("Frame")
+preview.Name                    = "Preview"
+preview.Size                    = UDim2.new(0, PREVIEW_W, 1, -CONTENT_TOP - OUTER_PAD)
+preview.Position                = UDim2.new(0, OUTER_PAD + SIDEBAR_W + COL_GAP, 0, CONTENT_TOP)
+preview.BackgroundColor3        = PANEL_2
+preview.BorderSizePixel         = 0
+preview.ZIndex                  = 52
+preview.Parent                  = dialog
+addCorner(preview, 10)
+addStroke(preview, BORDER, 1, 0.5)
 
--- ── Button state refresh ──────────────────────────────────────────────────────
+local previewIconHolder         = Instance.new("Frame")
+previewIconHolder.Size          = UDim2.new(0, 76, 0, 76)
+previewIconHolder.Position      = UDim2.new(0.5, -38, 0, 20)
+previewIconHolder.BackgroundTransparency = 1
+previewIconHolder.ZIndex        = 53
+previewIconHolder.Parent        = preview
 
-local function refreshButtons()
-	for _, entry in ipairs(itemEntries) do
-		local btn        = entry.btn
-		local priceLabel = entry.priceLabel
-		local kind       = entry.itemType
+local previewName                = Instance.new("TextLabel")
+previewName.Size                 = UDim2.new(1, -24, 0, 24)
+previewName.Position             = UDim2.new(0, 12, 0, 104)
+previewName.BackgroundTransparency = 1
+previewName.TextColor3           = WHITE
+previewName.Font                 = Enum.Font.GothamBold
+previewName.TextSize             = 17
+previewName.TextXAlignment       = Enum.TextXAlignment.Center
+previewName.Text                 = ""
+previewName.ZIndex               = 53
+previewName.Parent               = preview
+
+local previewTier                 = Instance.new("TextLabel")
+previewTier.Size                  = UDim2.new(0, 80, 0, 20)
+previewTier.Position              = UDim2.new(0.5, -40, 0, 130)
+previewTier.BorderSizePixel       = 0
+previewTier.Font                  = Enum.Font.GothamBold
+previewTier.TextSize              = 11
+previewTier.TextColor3            = WHITE
+previewTier.TextStrokeColor3      = PANEL
+previewTier.TextStrokeTransparency = 0.4
+previewTier.Text                  = ""
+previewTier.ZIndex                = 53
+previewTier.Parent                = preview
+addCorner(previewTier, 10)
+
+local previewStat                 = Instance.new("TextLabel")
+previewStat.Size                  = UDim2.new(1, -24, 0, 20)
+previewStat.Position              = UDim2.new(0, 12, 0, 160)
+previewStat.BackgroundTransparency = 1
+previewStat.Font                  = Enum.Font.Gotham
+previewStat.TextSize              = 13
+previewStat.TextColor3            = LIGHT
+previewStat.TextXAlignment        = Enum.TextXAlignment.Center
+previewStat.Text                  = ""
+previewStat.ZIndex                = 53
+previewStat.Parent                = preview
+
+local previewDivider               = Instance.new("Frame")
+previewDivider.Size                = UDim2.new(1, -24, 0, 1)
+previewDivider.Position            = UDim2.new(0, 12, 0, 196)
+previewDivider.BackgroundColor3    = BORDER
+previewDivider.BorderSizePixel     = 0
+previewDivider.ZIndex              = 53
+previewDivider.Parent              = preview
+
+local previewPrice                 = Instance.new("TextLabel")
+previewPrice.Size                  = UDim2.new(1, -24, 0, 26)
+previewPrice.Position              = UDim2.new(0, 12, 0, 212)
+previewPrice.BackgroundTransparency = 1
+previewPrice.Font                  = Enum.Font.GothamBold
+previewPrice.TextSize              = 20
+previewPrice.TextColor3            = GOLD
+previewPrice.TextXAlignment        = Enum.TextXAlignment.Left
+previewPrice.Text                  = ""
+previewPrice.ZIndex                = 53
+previewPrice.Parent                = preview
+
+local previewActionBtn             = Instance.new("TextButton")
+previewActionBtn.Size              = UDim2.new(1, -24, 0, 36)
+previewActionBtn.Position          = UDim2.new(0, 12, 0, 246)
+previewActionBtn.BorderSizePixel   = 0
+previewActionBtn.Font              = Enum.Font.GothamBold
+previewActionBtn.TextSize          = 14
+previewActionBtn.ZIndex            = 53
+previewActionBtn.Parent            = preview
+addCorner(previewActionBtn, 8)
+
+-- List column — every item in the selected category; stretches to fill
+-- whatever width remains after the sidebar and preview pane
+local listCol                     = Instance.new("Frame")
+listCol.Name                       = "ItemList"
+listCol.Size                       = UDim2.new(1, -(OUTER_PAD + SIDEBAR_W + COL_GAP + PREVIEW_W + COL_GAP + OUTER_PAD), 1, -CONTENT_TOP - OUTER_PAD)
+listCol.Position                   = UDim2.new(0, OUTER_PAD + SIDEBAR_W + COL_GAP + PREVIEW_W + COL_GAP, 0, CONTENT_TOP)
+listCol.BackgroundTransparency     = 1
+listCol.ZIndex                     = 52
+listCol.Parent                     = dialog
+
+local listHeader                   = Instance.new("TextLabel")
+listHeader.Size                    = UDim2.new(1, 0, 0, 22)
+listHeader.BackgroundTransparency  = 1
+listHeader.TextColor3              = LIGHT
+listHeader.Font                    = Enum.Font.GothamBold
+listHeader.TextSize                = 12
+listHeader.TextXAlignment          = Enum.TextXAlignment.Left
+listHeader.Text                    = "PICKAXES"
+listHeader.ZIndex                  = 52
+listHeader.Parent                  = listCol
+
+local listRows                     = Instance.new("Frame")
+listRows.Size                      = UDim2.new(1, 0, 1, -26)
+listRows.Position                  = UDim2.new(0, 0, 0, 26)
+listRows.BackgroundTransparency    = 1
+listRows.ZIndex                    = 52
+listRows.Parent                    = listCol
+
+local listLayout                   = Instance.new("UIListLayout")
+listLayout.SortOrder                = Enum.SortOrder.LayoutOrder
+listLayout.Padding                  = UDim.new(0, 6)
+listLayout.Parent                   = listRows
+
+-- ── List row builder ───────────────────────────────────────────────────────────
+
+local rowEntries = {}   -- { frame, stroke, tag, itemType, item }
+
+local function makeListRow(itemType, item, order)
+	local row                  = Instance.new("Frame")
+	row.Name                    = item.Id
+	row.Size                    = UDim2.new(1, 0, 0, 44)
+	row.BackgroundColor3        = PANEL
+	row.BorderSizePixel         = 0
+	row.LayoutOrder              = order
+	row.ZIndex                   = 53
+	row.Parent                   = listRows
+	addCorner(row, 8)
+	local rowStroke               = Instance.new("UIStroke")
+	rowStroke.Color                = BORDER
+	rowStroke.Thickness             = 1
+	rowStroke.Transparency          = 0.5
+	rowStroke.Parent                = row
+
+	local tierColor                = getTierColor(itemType, item)
+	makeIconBadge(row, UDim2.new(0, 28, 0, 28), UDim2.new(0, 8, 0.5, -14), itemType, tierColor)
+
+	local nameLabel                 = Instance.new("TextLabel")
+	nameLabel.Size                   = UDim2.new(1, -140, 1, 0)
+	nameLabel.Position               = UDim2.new(0, 46, 0, 0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.TextColor3             = WHITE
+	nameLabel.Font                   = Enum.Font.GothamBold
+	nameLabel.TextSize               = 13
+	nameLabel.TextXAlignment         = Enum.TextXAlignment.Left
+	nameLabel.Text                   = item.Name
+	nameLabel.ZIndex                 = 54
+	nameLabel.Parent                 = row
+
+	local tag                        = Instance.new("TextLabel")
+	tag.Size                         = UDim2.new(0, 84, 1, 0)
+	tag.Position                     = UDim2.new(1, -94, 0, 0)
+	tag.BackgroundTransparency       = 1
+	tag.Font                         = Enum.Font.GothamBold
+	tag.TextSize                     = 13
+	tag.TextXAlignment               = Enum.TextXAlignment.Right
+	tag.ZIndex                       = 54
+	tag.Parent                       = row
+
+	local btn                        = Instance.new("TextButton")
+	btn.Size                         = UDim2.new(1, 0, 1, 0)
+	btn.BackgroundTransparency       = 1
+	btn.Text                         = ""
+	btn.ZIndex                       = 55
+	btn.Parent                       = row
+	btn.MouseButton1Click:Connect(function()
+		selectItem(itemType, item)
+	end)
+
+	table.insert(rowEntries, { frame = row, stroke = rowStroke, tag = tag, itemType = itemType, item = item })
+end
+
+-- ── Refresh: preview pane ─────────────────────────────────────────────────────
+
+refreshPreview = function()
+	local item = selectedItem
+	if not item then return end
+
+	local tierColor = getTierColor(selectedType, item)
+
+	for _, child in ipairs(previewIconHolder:GetChildren()) do child:Destroy() end
+	buildIcon(previewIconHolder, selectedType, tierColor)
+
+	previewName.Text        = item.Name
+	previewTier.Text         = "TIER " .. tostring(item.Tier)
+	previewTier.BackgroundColor3 = tierColor
+
+	if selectedType == "pickaxe" then
+		previewStat.Text = string.format("Mining Power  ×%d", item.MiningPower)
+	else
+		previewStat.Text = string.format("Capacity  %d kg", item.Capacity)
+	end
+
+	local isEquipped = (selectedType == "pickaxe"  and equippedPickaxeId  == item.Id)
+	               or  (selectedType == "backpack" and equippedBackpackId == item.Id)
+	local isOwned    = (selectedType == "pickaxe"  and ownedPickaxes[item.Id])
+	               or  (selectedType == "backpack" and ownedBackpacks[item.Id])
+	local canAfford  = cachedBalance >= item.Cost
+
+	if isOwned or item.Cost <= 0 then
+		previewPrice.Text = "Owned"
+		previewPrice.TextColor3 = LIGHT
+	else
+		previewPrice.Text = "₡" .. fmtNum(item.Cost)
+		previewPrice.TextColor3 = canAfford and GOLD or LIGHT
+	end
+
+	if isEquipped then
+		previewActionBtn.Text             = "EQUIPPED"
+		previewActionBtn.BackgroundColor3 = GREEN
+		previewActionBtn.TextColor3       = WHITE
+		previewActionBtn.AutoButtonColor  = false
+	elseif isOwned then
+		previewActionBtn.Text             = "EQUIP"
+		previewActionBtn.BackgroundColor3 = GOLD
+		previewActionBtn.TextColor3       = PANEL
+		previewActionBtn.AutoButtonColor  = true
+	elseif canAfford then
+		previewActionBtn.Text             = "PURCHASE"
+		previewActionBtn.BackgroundColor3 = GREEN
+		previewActionBtn.TextColor3       = WHITE
+		previewActionBtn.AutoButtonColor  = true
+	else
+		previewActionBtn.Text             = "PURCHASE"
+		previewActionBtn.BackgroundColor3 = PANEL
+		previewActionBtn.TextColor3       = LIGHT
+		previewActionBtn.AutoButtonColor  = false
+	end
+end
+
+-- ── Refresh: list rows (tags + selection highlight) ───────────────────────────
+
+refreshList = function()
+	for _, entry in ipairs(rowEntries) do
 		local item       = entry.item
+		local kind       = entry.itemType
 
 		local isEquipped = (kind == "pickaxe"  and equippedPickaxeId  == item.Id)
 		               or  (kind == "backpack" and equippedBackpackId == item.Id)
 		local isOwned    = (kind == "pickaxe"  and ownedPickaxes[item.Id])
 		               or  (kind == "backpack" and ownedBackpacks[item.Id])
 		local canAfford  = cachedBalance >= item.Cost
+		local isSelected = (kind == selectedType) and (item.Id == selectedItem.Id)
 
-		-- Price label: show "Owned" once purchased, price otherwise
-		if isOwned or item.Cost <= 0 then
-			priceLabel.Text      = "Owned"
-			priceLabel.TextColor3 = Color3.fromRGB(120, 120, 140)
+		if isEquipped then
+			entry.tag.Text = "Equipped"
+			entry.tag.TextColor3 = GREEN
+		elseif isOwned or item.Cost <= 0 then
+			entry.tag.Text = "Owned"
+			entry.tag.TextColor3 = GREEN
 		else
-			priceLabel.Text      = "₡" .. fmtNum(item.Cost)
-			priceLabel.TextColor3 = canAfford and Color3.fromRGB(215, 175, 30) or Color3.fromRGB(130, 130, 145)
+			entry.tag.Text = "₡" .. fmtNum(item.Cost)
+			entry.tag.TextColor3 = canAfford and GOLD or LIGHT
 		end
 
-		-- Button
-		if isEquipped then
-			btn.Text             = "Equipped"
-			btn.BackgroundColor3 = Color3.fromRGB(45, 155, 75)
-			btn.TextColor3       = Color3.fromRGB(255, 255, 255)
-			btn.AutoButtonColor  = false
-		elseif isOwned then
-			btn.Text             = "Equip"
-			btn.BackgroundColor3 = Color3.fromRGB(70, 90, 170)
-			btn.TextColor3       = Color3.fromRGB(255, 255, 255)
-			btn.AutoButtonColor  = true
-		elseif canAfford then
-			btn.Text             = "Buy"
-			btn.BackgroundColor3 = Color3.fromRGB(50, 110, 200)
-			btn.TextColor3       = Color3.fromRGB(255, 255, 255)
-			btn.AutoButtonColor  = true
+		if isSelected then
+			entry.frame.BackgroundColor3 = PANEL_2
+			entry.stroke.Color = GOLD
+			entry.stroke.Transparency = 0
 		else
-			btn.Text             = "Buy"
-			btn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-			btn.TextColor3       = Color3.fromRGB(130, 130, 145)
-			btn.AutoButtonColor  = false
+			entry.frame.BackgroundColor3 = PANEL
+			entry.stroke.Color = BORDER
+			entry.stroke.Transparency = 0.5
 		end
 	end
 end
+
+-- ── Category switching ─────────────────────────────────────────────────────────
+
+selectItem = function(itemType, item)
+	selectedType = itemType
+	selectedItem = item
+	refreshPreview()
+	refreshList()
+end
+
+selectCategory = function(itemType)
+	for kind, tabData in pairs(tabs) do
+		local active = (kind == itemType)
+		tabData.frame.BackgroundColor3 = active and GOLD or PANEL_2
+		tabData.label.TextColor3       = active and PANEL or LIGHT
+		for _, part in ipairs(tabData.iconParts) do
+			part.BackgroundColor3 = active and PANEL or LIGHT
+		end
+	end
+
+	for _, child in ipairs(listRows:GetChildren()) do
+		if not child:IsA("UIListLayout") then child:Destroy() end
+	end
+	rowEntries = {}
+
+	local list = itemType == "pickaxe" and EquipmentConfig.Pickaxes or EquipmentConfig.Backpacks
+	listHeader.Text = itemType == "pickaxe" and "PICKAXES" or "BACKPACKS"
+	for i, item in ipairs(list) do
+		makeListRow(itemType, item, i)
+	end
+
+	selectItem(itemType, list[1])
+end
+
+-- Build tabs and populate the default category
+makeTab("pickaxe", "Pickaxes", 1)
+makeTab("backpack", "Backpacks", 2)
+selectCategory("pickaxe")
+
+previewActionBtn.MouseButton1Click:Connect(function()
+	local item = selectedItem
+	if not item then return end
+
+	local isEquipped = (selectedType == "pickaxe"  and equippedPickaxeId  == item.Id)
+	               or  (selectedType == "backpack" and equippedBackpackId == item.Id)
+	if isEquipped then return end
+
+	local isOwned = (selectedType == "pickaxe"  and ownedPickaxes[item.Id])
+	            or  (selectedType == "backpack" and ownedBackpacks[item.Id])
+
+	if isOwned then
+		EquipItem:FireServer(selectedType, item.Id)
+	else
+		if cachedBalance < item.Cost then return end
+		pendingPurchaseId = item.Id
+		PurchaseEquipment:FireServer(selectedType, item.Id)
+	end
+end)
 
 -- ── Equip flash ───────────────────────────────────────────────────────────────
 -- Brief glow on the newly-equipped pickaxe so buying an upgrade reads as an event,
@@ -560,7 +716,8 @@ end
 local function openShop()
 	if isShopOpen then return end
 	isShopOpen = true
-	refreshButtons()
+	refreshPreview()
+	refreshList()
 	shopScreen.Enabled = true
 end
 
@@ -577,7 +734,10 @@ dim.MouseButton1Click:Connect(closeShop)
 
 Eco_CreditsUpdate.OnClientEvent:Connect(function(balance)
 	cachedBalance = balance
-	if isShopOpen then refreshButtons() end
+	if isShopOpen then
+		refreshPreview()
+		refreshList()
+	end
 end)
 
 Eq_Update.OnClientEvent:Connect(function(pickaxeId, backpackId, ownedPickaxeList, ownedBackpackList)
@@ -591,7 +751,10 @@ Eq_Update.OnClientEvent:Connect(function(pickaxeId, backpackId, ownedPickaxeList
 	for _, id in ipairs(ownedPickaxeList  or {}) do ownedPickaxes[id]  = true end
 	for _, id in ipairs(ownedBackpackList or {}) do ownedBackpacks[id] = true end
 
-	if isShopOpen then refreshButtons() end
+	if isShopOpen then
+		refreshPreview()
+		refreshList()
+	end
 
 	-- Show toast only when this Eq_Update is confirming a pending purchase
 	if pendingPurchaseId then

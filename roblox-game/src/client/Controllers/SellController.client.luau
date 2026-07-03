@@ -25,8 +25,8 @@ local ORE_COLOR = {
 	iron  = Color3.fromRGB(180, 130, 100),
 	gold  = Color3.fromRGB(215, 175, 30),
 }
-local ROW_H   = 20
-local ROW_GAP = 4
+local ROW_H   = 34
+local ROW_GAP = 8
 
 -- ── Helper ──────────────────────────────────────────────────────────────────
 
@@ -44,12 +44,18 @@ local function addStroke(inst, color, thickness, transparency)
 	s.Parent = inst
 end
 
--- ── Visual tokens (shared with the shop screen's palette so both dialogs read as one system) ──
+-- ── Visual tokens ────────────────────────────────────────────────────────────
+-- Exact hex from the reference board's style guide -- shared with ShopController
+-- so both dialogs read as one system.
 
-local GOLD    = Color3.fromRGB(215, 175, 30)
-local PANEL   = Color3.fromRGB(27, 31, 38)
-local PANEL_2 = Color3.fromRGB(38, 43, 52)
-local BAD     = Color3.fromRGB(168, 54, 54)
+local PANEL   = Color3.fromRGB(30, 35, 43)    -- #1E232B
+local PANEL_2 = Color3.fromRGB(44, 49, 58)    -- #2C313A
+local BORDER  = Color3.fromRGB(62, 68, 77)    -- #3E444D
+local GOLD    = Color3.fromRGB(255, 193, 7)   -- #FFC107
+local GREEN   = Color3.fromRGB(76, 175, 80)   -- #4CAF50
+local LIGHT   = Color3.fromRGB(176, 184, 193) -- #B0B8C1
+local RED     = Color3.fromRGB(217, 83, 79)   -- #D9534F
+local BLUE    = Color3.fromRGB(93, 173, 226)  -- #5DADE2
 
 -- ── ScreenGui ──────────────────────────────────────────────────────────────
 
@@ -72,61 +78,61 @@ backdrop.Parent               = sellScreen
 
 local dialog                  = Instance.new("Frame")
 dialog.Name                   = "Dialog"
-dialog.Size                   = UDim2.new(0, 410, 0, 60)
+dialog.Size                   = UDim2.new(0, 380, 0, 60)
 dialog.AnchorPoint            = Vector2.new(0.5, 0.5)
 dialog.Position               = UDim2.new(0.5, 0, 0.5, 0)
 dialog.BackgroundColor3       = PANEL
 dialog.BorderSizePixel        = 0
 dialog.ZIndex                 = 50
 dialog.Parent                 = sellScreen
-addCorner(dialog, 10)
+addCorner(dialog, 12)
+addStroke(dialog, BORDER, 1, 0.4)
 
--- Title bar -- hairline gold accent instead of a solid block; the dialog's own
--- background shows through the header, so no corner-masking fill is needed.
-local titleBar                = Instance.new("Frame")
-titleBar.Size                 = UDim2.new(1, 0, 0, 44)
-titleBar.BackgroundTransparency = 1
-titleBar.ZIndex               = 51
-titleBar.Parent               = dialog
-
-local titleAccent             = Instance.new("Frame")
-titleAccent.Size              = UDim2.new(1, -32, 0, 2)
-titleAccent.Position          = UDim2.new(0, 16, 0, 41)
-titleAccent.BackgroundColor3  = GOLD
-titleAccent.BorderSizePixel   = 0
-titleAccent.ZIndex            = 51
-titleAccent.Parent            = dialog
-
-local titleLabel              = Instance.new("TextLabel")
-titleLabel.Size               = UDim2.new(1, -56, 1, 0)
-titleLabel.Position           = UDim2.new(0, 16, 0, 0)
+-- Header: title text directly on the panel + a solid red close button, matching
+-- the reference card exactly (no accent bar, no title-bar fill block).
+local titleLabel               = Instance.new("TextLabel")
+titleLabel.Size                = UDim2.new(1, -56, 0, 24)
+titleLabel.Position            = UDim2.new(0, 16, 0, 14)
 titleLabel.BackgroundTransparency = 1
-titleLabel.TextColor3         = GOLD
-titleLabel.Font               = Enum.Font.GothamBold
-titleLabel.TextSize           = 15
-titleLabel.TextXAlignment     = Enum.TextXAlignment.Left
-titleLabel.Text               = "ATLAS ORE EXCHANGE"
-titleLabel.ZIndex             = 52
-titleLabel.Parent             = titleBar
+titleLabel.TextColor3          = GOLD
+titleLabel.Font                = Enum.Font.GothamBold
+titleLabel.TextSize            = 16
+titleLabel.TextXAlignment       = Enum.TextXAlignment.Left
+titleLabel.Text                 = "ATLAS ORE EXCHANGE"
+titleLabel.ZIndex               = 51
+titleLabel.Parent               = dialog
 
-local closeBtn                = Instance.new("TextButton")
-closeBtn.Size                 = UDim2.new(0, 32, 0, 32)
-closeBtn.Position             = UDim2.new(1, -40, 0.5, -16)
-closeBtn.BackgroundColor3     = PANEL_2
-closeBtn.BorderSizePixel      = 0
-closeBtn.TextColor3           = Color3.fromRGB(214, 130, 130)
-closeBtn.Font                 = Enum.Font.GothamBold
-closeBtn.TextSize             = 16
-closeBtn.Text                 = "✕"
-closeBtn.ZIndex               = 53
-closeBtn.Parent               = titleBar
+local closeBtn                 = Instance.new("TextButton")
+closeBtn.Size                  = UDim2.new(0, 26, 0, 26)
+closeBtn.Position              = UDim2.new(1, -40, 0, 14)
+closeBtn.BackgroundColor3      = RED
+closeBtn.BorderSizePixel       = 0
+closeBtn.TextColor3            = Color3.fromRGB(255, 255, 255)
+closeBtn.Font                  = Enum.Font.GothamBold
+closeBtn.TextSize              = 14
+closeBtn.Text                  = "✕"
+closeBtn.ZIndex                = 51
+closeBtn.Parent                = dialog
 addCorner(closeBtn, 6)
-addStroke(closeBtn, BAD, 1.25, 0.2)
+
+local subheader                = Instance.new("TextLabel")
+subheader.Size                 = UDim2.new(1, -32, 0, 16)
+subheader.Position             = UDim2.new(0, 16, 0, 46)
+subheader.BackgroundTransparency = 1
+subheader.TextColor3           = LIGHT
+subheader.Font                 = Enum.Font.GothamBold
+subheader.TextSize             = 11
+subheader.TextXAlignment       = Enum.TextXAlignment.Left
+subheader.Text                 = "TODAY'S PRICES"
+subheader.ZIndex               = 51
+subheader.Parent               = dialog
+
+local CONTENT_Y = 70
 
 -- Content
 local content                 = Instance.new("Frame")
 content.Size                  = UDim2.new(1, -32, 0, 0)
-content.Position              = UDim2.new(0, 16, 0, 52)
+content.Position              = UDim2.new(0, 16, 0, CONTENT_Y)
 content.BackgroundTransparency = 1
 content.ZIndex                = 51
 content.Parent                = dialog
@@ -144,36 +150,45 @@ rowLayout.Parent              = oreRows
 
 local divider                 = Instance.new("Frame")
 divider.Size                  = UDim2.new(1, 0, 0, 1)
-divider.BackgroundColor3      = Color3.fromRGB(55, 55, 55)
+divider.BackgroundColor3      = BORDER
 divider.BorderSizePixel       = 0
 divider.ZIndex                = 51
 divider.Parent                = content
 
+-- Footer: "TOTAL" caption + big amount stacked on the left, SELL ALL pinned right
+local totalCaption             = Instance.new("TextLabel")
+totalCaption.Size               = UDim2.new(0, 160, 0, 14)
+totalCaption.BackgroundTransparency = 1
+totalCaption.TextColor3         = LIGHT
+totalCaption.Font               = Enum.Font.GothamBold
+totalCaption.TextSize           = 10
+totalCaption.TextXAlignment     = Enum.TextXAlignment.Left
+totalCaption.Text               = "TOTAL"
+totalCaption.ZIndex             = 51
+totalCaption.Parent             = content
+
 local totalLabel              = Instance.new("TextLabel")
-totalLabel.Size               = UDim2.new(1, 0, 0, 24)
+totalLabel.Size               = UDim2.new(0, 160, 0, 26)
 totalLabel.BackgroundTransparency = 1
-totalLabel.TextColor3         = Color3.fromRGB(215, 175, 30)
+totalLabel.TextColor3         = GOLD
 totalLabel.Font               = Enum.Font.GothamBold
-totalLabel.TextSize           = 15
-totalLabel.TextXAlignment     = Enum.TextXAlignment.Right
-totalLabel.Text               = "Total:  ₡0"
+totalLabel.TextSize           = 20
+totalLabel.TextXAlignment     = Enum.TextXAlignment.Left
+totalLabel.Text               = "₡0"
 totalLabel.ZIndex             = 51
 totalLabel.Parent             = content
 
 local sellAllBtn              = Instance.new("TextButton")
-sellAllBtn.Size               = UDim2.new(0, 170, 0, 40)
-sellAllBtn.AnchorPoint        = Vector2.new(0.5, 0)
-sellAllBtn.Position           = UDim2.new(0.5, 0, 0, 0)
-sellAllBtn.BackgroundColor3   = Color3.fromRGB(38, 155, 38)
+sellAllBtn.Size               = UDim2.new(0, 132, 0, 38)
+sellAllBtn.BackgroundColor3   = GREEN
 sellAllBtn.BorderSizePixel    = 0
 sellAllBtn.TextColor3         = Color3.fromRGB(255, 255, 255)
 sellAllBtn.Font               = Enum.Font.GothamBold
-sellAllBtn.TextSize           = 15
+sellAllBtn.TextSize           = 14
 sellAllBtn.Text               = "SELL ALL"
 sellAllBtn.ZIndex             = 51
 sellAllBtn.Parent             = content
 addCorner(sellAllBtn, 8)
-addStroke(sellAllBtn, Color3.fromRGB(90, 205, 90), 1.25, 0.25)
 
 -- ── Sell sound ─────────────────────────────────────────────────────────────
 
@@ -183,6 +198,9 @@ sellSound.Volume              = 0.85
 sellSound.Parent              = sellScreen
 
 -- ── Quantity picker (sub-modal, appears over dialog) ────────────────────────
+-- Not part of the reference board (its mockup sells a whole stack in one click),
+-- but this game supports partial sells, so the picker stays -- just restyled to
+-- match the same panel/palette as the rest of the dialog.
 -- A second dimmer behind the picker blocks clicks on the dialog underneath.
 
 local pickerDim               = Instance.new("Frame")
@@ -200,46 +218,31 @@ picker.Size                   = UDim2.new(0, 310, 0, 238)
 picker.AnchorPoint            = Vector2.new(0.5, 0.5)
 picker.Position               = UDim2.new(0.5, 0, 0.5, 0)
 picker.BackgroundColor3       = PANEL_2
-picker.BackgroundTransparency = 0
 picker.BorderSizePixel        = 0
 picker.ZIndex                 = 70
 picker.Visible                = false
 picker.Parent                 = sellScreen
-addCorner(picker, 10)
-
--- Picker title bar -- same hairline treatment as the main dialog
-local pickerTitleBar          = Instance.new("Frame")
-pickerTitleBar.Size           = UDim2.new(1, 0, 0, 40)
-pickerTitleBar.BackgroundTransparency = 1
-pickerTitleBar.ZIndex         = 71
-pickerTitleBar.Parent         = picker
-
-local pickerTitleAccent       = Instance.new("Frame")
-pickerTitleAccent.Size        = UDim2.new(1, -24, 0, 2)
-pickerTitleAccent.Position    = UDim2.new(0, 12, 0, 37)
-pickerTitleAccent.BackgroundColor3 = GOLD
-pickerTitleAccent.BorderSizePixel = 0
-pickerTitleAccent.ZIndex      = 71
-pickerTitleAccent.Parent      = picker
+addCorner(picker, 12)
+addStroke(picker, BORDER, 1, 0.4)
 
 local pickerTitle             = Instance.new("TextLabel")
-pickerTitle.Size              = UDim2.new(1, -24, 1, 0)
-pickerTitle.Position          = UDim2.new(0, 12, 0, 0)
+pickerTitle.Size              = UDim2.new(1, -24, 0, 24)
+pickerTitle.Position          = UDim2.new(0, 12, 0, 14)
 pickerTitle.BackgroundTransparency = 1
 pickerTitle.TextColor3        = GOLD
 pickerTitle.Font              = Enum.Font.GothamBold
 pickerTitle.TextSize          = 15
 pickerTitle.TextXAlignment    = Enum.TextXAlignment.Left
 pickerTitle.Text              = "Sell Ore"
-pickerTitle.ZIndex            = 72
-pickerTitle.Parent            = pickerTitleBar
+pickerTitle.ZIndex            = 71
+pickerTitle.Parent            = picker
 
 -- "You have: N  •  ₡N each"
 local pickerInfo              = Instance.new("TextLabel")
 pickerInfo.Size               = UDim2.new(1, -24, 0, 22)
 pickerInfo.Position           = UDim2.new(0, 12, 0, 46)
 pickerInfo.BackgroundTransparency = 1
-pickerInfo.TextColor3         = Color3.fromRGB(180, 180, 180)
+pickerInfo.TextColor3         = LIGHT
 pickerInfo.Font               = Enum.Font.Gotham
 pickerInfo.TextSize           = 12
 pickerInfo.TextXAlignment     = Enum.TextXAlignment.Left
@@ -251,7 +254,7 @@ pickerInfo.Parent             = picker
 local halfBtn                 = Instance.new("TextButton")
 halfBtn.Size                  = UDim2.new(0, 128, 0, 28)
 halfBtn.Position              = UDim2.new(0.5, -134, 0, 74)
-halfBtn.BackgroundColor3      = Color3.fromRGB(55, 75, 115)
+halfBtn.BackgroundColor3      = BLUE
 halfBtn.BorderSizePixel       = 0
 halfBtn.TextColor3            = Color3.fromRGB(255, 255, 255)
 halfBtn.Font                  = Enum.Font.GothamBold
@@ -260,12 +263,11 @@ halfBtn.Text                  = "Half"
 halfBtn.ZIndex                = 71
 halfBtn.Parent                = picker
 addCorner(halfBtn, 6)
-addStroke(halfBtn, Color3.fromRGB(120, 150, 210), 1, 0.3)
 
 local allBtn                  = Instance.new("TextButton")
 allBtn.Size                   = UDim2.new(0, 128, 0, 28)
 allBtn.Position               = UDim2.new(0.5, 6, 0, 74)
-allBtn.BackgroundColor3       = Color3.fromRGB(55, 75, 115)
+allBtn.BackgroundColor3       = BLUE
 allBtn.BorderSizePixel        = 0
 allBtn.TextColor3             = Color3.fromRGB(255, 255, 255)
 allBtn.Font                   = Enum.Font.GothamBold
@@ -274,13 +276,12 @@ allBtn.Text                   = "Select All"
 allBtn.ZIndex                 = 71
 allBtn.Parent                 = picker
 addCorner(allBtn, 6)
-addStroke(allBtn, Color3.fromRGB(120, 150, 210), 1, 0.3)
 
 -- Quantity text box
 local qtyBox                  = Instance.new("TextBox")
 qtyBox.Size                   = UDim2.new(1, -24, 0, 50)
 qtyBox.Position               = UDim2.new(0, 12, 0, 110)
-qtyBox.BackgroundColor3       = Color3.fromRGB(35, 35, 35)
+qtyBox.BackgroundColor3       = PANEL
 qtyBox.BorderSizePixel        = 0
 qtyBox.TextColor3             = Color3.fromRGB(255, 255, 255)
 qtyBox.Font                   = Enum.Font.GothamBold
@@ -298,7 +299,7 @@ local pickerTotal             = Instance.new("TextLabel")
 pickerTotal.Size              = UDim2.new(1, -24, 0, 22)
 pickerTotal.Position          = UDim2.new(0, 12, 0, 168)
 pickerTotal.BackgroundTransparency = 1
-pickerTotal.TextColor3        = Color3.fromRGB(215, 175, 30)
+pickerTotal.TextColor3        = GOLD
 pickerTotal.Font              = Enum.Font.GothamBold
 pickerTotal.TextSize          = 14
 pickerTotal.TextXAlignment    = Enum.TextXAlignment.Right
@@ -310,7 +311,7 @@ pickerTotal.Parent            = picker
 local pickerCancelBtn         = Instance.new("TextButton")
 pickerCancelBtn.Size          = UDim2.new(0, 115, 0, 36)
 pickerCancelBtn.Position      = UDim2.new(0.5, -123, 0, 196)
-pickerCancelBtn.BackgroundColor3 = Color3.fromRGB(80, 28, 28)
+pickerCancelBtn.BackgroundColor3 = RED
 pickerCancelBtn.BorderSizePixel = 0
 pickerCancelBtn.TextColor3    = Color3.fromRGB(255, 255, 255)
 pickerCancelBtn.Font          = Enum.Font.GothamBold
@@ -319,12 +320,11 @@ pickerCancelBtn.Text          = "Cancel"
 pickerCancelBtn.ZIndex        = 71
 pickerCancelBtn.Parent        = picker
 addCorner(pickerCancelBtn, 8)
-addStroke(pickerCancelBtn, Color3.fromRGB(190, 90, 90), 1, 0.3)
 
 local pickerConfirmBtn        = Instance.new("TextButton")
 pickerConfirmBtn.Size         = UDim2.new(0, 115, 0, 36)
 pickerConfirmBtn.Position     = UDim2.new(0.5, 8, 0, 196)
-pickerConfirmBtn.BackgroundColor3 = Color3.fromRGB(38, 155, 38)
+pickerConfirmBtn.BackgroundColor3 = GREEN
 pickerConfirmBtn.BorderSizePixel = 0
 pickerConfirmBtn.TextColor3   = Color3.fromRGB(255, 255, 255)
 pickerConfirmBtn.Font         = Enum.Font.GothamBold
@@ -333,7 +333,6 @@ pickerConfirmBtn.Text         = "SELL 0"
 pickerConfirmBtn.ZIndex       = 71
 pickerConfirmBtn.Parent       = picker
 addCorner(pickerConfirmBtn, 8)
-addStroke(pickerConfirmBtn, Color3.fromRGB(255, 255, 255), 1, 0.75)
 
 -- ── Picker state ────────────────────────────────────────────────────────────
 
@@ -354,10 +353,10 @@ local function refreshPickerPreview()
 
 	if qty > 0 then
 		pickerConfirmBtn.Text             = string.format("SELL %d", qty)
-		pickerConfirmBtn.BackgroundColor3 = Color3.fromRGB(38, 155, 38)
+		pickerConfirmBtn.BackgroundColor3 = GREEN
 	else
 		pickerConfirmBtn.Text             = "SELL"
-		pickerConfirmBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+		pickerConfirmBtn.BackgroundColor3 = BORDER
 	end
 end
 
@@ -432,69 +431,56 @@ local function buildContent(items)
 			row.ZIndex              = 52
 			row.Parent              = oreRows
 
-			-- Ore color swatch
-			local swatch             = Instance.new("Frame")
-			swatch.Size              = UDim2.new(0, 10, 0, 10)
-			swatch.Position          = UDim2.new(0, 0, 0.5, -5)
-			swatch.BackgroundColor3  = ORE_COLOR[oreType] or Color3.new(1, 1, 1)
-			swatch.BorderSizePixel   = 0
-			swatch.ZIndex            = 53
-			swatch.Parent            = row
-			addCorner(swatch, 3)
+			-- Ore icon chip
+			local icon               = Instance.new("Frame")
+			icon.Size                = UDim2.new(0, 24, 0, 24)
+			icon.Position            = UDim2.new(0, 0, 0.5, -12)
+			icon.BackgroundColor3    = ORE_COLOR[oreType] or Color3.new(1, 1, 1)
+			icon.BorderSizePixel     = 0
+			icon.ZIndex              = 53
+			icon.Parent              = row
+			addCorner(icon, 6)
 
 			-- Ore name + quantity
 			local col1              = Instance.new("TextLabel")
-			col1.Size               = UDim2.new(0, 120, 1, 0)
-			col1.Position           = UDim2.new(0, 16, 0, 0)
+			col1.Size               = UDim2.new(0, 112, 1, 0)
+			col1.Position           = UDim2.new(0, 34, 0, 0)
 			col1.BackgroundTransparency = 1
-			col1.TextColor3         = ORE_COLOR[oreType] or Color3.new(1,1,1)
+			col1.TextColor3         = Color3.fromRGB(240, 240, 240)
 			col1.Font               = Enum.Font.GothamBold
-			col1.TextSize           = 13
+			col1.TextSize           = 14
 			col1.TextXAlignment     = Enum.TextXAlignment.Left
 			col1.Text               = string.format("%s  ×%d", name, qty)
 			col1.ZIndex             = 53
 			col1.Parent             = row
 
-			-- Price per unit
+			-- Line total (per unit price would clutter a 380px card -- this game
+			-- shows the full line value here, same field the reference calls "price")
 			local col2              = Instance.new("TextLabel")
-			col2.Size               = UDim2.new(0, 90, 1, 0)
-			col2.Position           = UDim2.new(0, 136, 0, 0)
+			col2.Size               = UDim2.new(0, 70, 1, 0)
+			col2.Position           = UDim2.new(1, -140, 0, 0)
 			col2.BackgroundTransparency = 1
-			col2.TextColor3         = Color3.fromRGB(155, 155, 155)
-			col2.Font               = Enum.Font.Gotham
-			col2.TextSize           = 12
-			col2.TextXAlignment     = Enum.TextXAlignment.Left
-			col2.Text               = string.format("₡%d each", cfg.BaseValue)
+			col2.TextColor3         = GOLD
+			col2.Font               = Enum.Font.GothamBold
+			col2.TextSize           = 14
+			col2.TextXAlignment     = Enum.TextXAlignment.Right
+			col2.Text               = string.format("₡%d", lineTotal)
 			col2.ZIndex             = 53
 			col2.Parent             = row
 
-			-- Line total
-			local col3              = Instance.new("TextLabel")
-			col3.Size               = UDim2.new(0, 68, 1, 0)
-			col3.Position           = UDim2.new(0, 226, 0, 0)
-			col3.BackgroundTransparency = 1
-			col3.TextColor3         = Color3.fromRGB(215, 175, 30)
-			col3.Font               = Enum.Font.GothamBold
-			col3.TextSize           = 13
-			col3.TextXAlignment     = Enum.TextXAlignment.Right
-			col3.Text               = string.format("₡%d", lineTotal)
-			col3.ZIndex             = 53
-			col3.Parent             = row
-
 			-- Individual sell button (opens qty picker)
 			local sellRowBtn        = Instance.new("TextButton")
-			sellRowBtn.Size         = UDim2.new(0, 54, 0, 18)
-			sellRowBtn.Position     = UDim2.new(1, -54, 0.5, -9)
-			sellRowBtn.BackgroundColor3 = Color3.fromRGB(45, 90, 155)
+			sellRowBtn.Size         = UDim2.new(0, 60, 0, 26)
+			sellRowBtn.Position     = UDim2.new(1, -60, 0.5, -13)
+			sellRowBtn.BackgroundColor3 = BLUE
 			sellRowBtn.BorderSizePixel = 0
 			sellRowBtn.TextColor3   = Color3.fromRGB(255, 255, 255)
 			sellRowBtn.Font         = Enum.Font.GothamBold
-			sellRowBtn.TextSize     = 11
+			sellRowBtn.TextSize     = 12
 			sellRowBtn.Text         = "Sell"
 			sellRowBtn.ZIndex       = 53
 			sellRowBtn.Parent       = row
-			addCorner(sellRowBtn, 4)
-			addStroke(sellRowBtn, Color3.fromRGB(120, 160, 220), 1, 0.3)
+			addCorner(sellRowBtn, 6)
 
 			local capturedType = oreType
 			sellRowBtn.MouseButton1Click:Connect(function()
@@ -506,18 +492,18 @@ local function buildContent(items)
 	local oreH   = rowCount > 0 and (rowCount * ROW_H + (rowCount - 1) * ROW_GAP) or 0
 	oreRows.Size = UDim2.new(1, 0, 0, oreH)
 
-	local divY  = oreH + 10
-	local totY  = divY + 9
-	local btnY  = totY + 30
+	local divY  = oreH + 12
+	local footY = divY + 14
 
-	divider.Position      = UDim2.new(0, 0, 0, divY)
-	totalLabel.Position   = UDim2.new(0, 0, 0, totY)
-	totalLabel.Text       = string.format("Total:  ₡%d", total)
-	sellAllBtn.Position   = UDim2.new(0.5, 0, 0, btnY)
+	divider.Position       = UDim2.new(0, 0, 0, divY)
+	totalCaption.Position  = UDim2.new(0, 0, 0, footY)
+	totalLabel.Position    = UDim2.new(0, 0, 0, footY + 14)
+	totalLabel.Text        = string.format("₡%d", total)
+	sellAllBtn.Position    = UDim2.new(1, -132, 0, footY - 2)
 
-	local contentH  = btnY + 40 + 16
+	local contentH  = footY + 40 + 8
 	content.Size    = UDim2.new(1, -32, 0, contentH)
-	dialog.Size     = UDim2.new(0, 410, 0, 52 + contentH + 16)
+	dialog.Size     = UDim2.new(0, 380, 0, CONTENT_Y + contentH + 16)
 
 	currentTotal = total
 	return rowCount
