@@ -110,7 +110,7 @@ closeBtn.BorderSizePixel       = 0
 closeBtn.TextColor3            = Color3.fromRGB(255, 255, 255)
 closeBtn.Font                  = Enum.Font.GothamBold
 closeBtn.TextSize              = 14
-closeBtn.Text                  = "✕"
+closeBtn.Text                  = "X"
 closeBtn.ZIndex                = 51
 closeBtn.Parent                = dialog
 addCorner(closeBtn, 6)
