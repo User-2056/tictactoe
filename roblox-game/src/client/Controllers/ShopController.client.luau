@@ -40,6 +40,31 @@ local function fmtNum(n)
 	return (s:gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""))
 end
 
+-- ── Visual tokens (shared with the sell screen's palette so both dialogs read as one system) ──
+
+local GOLD    = Color3.fromRGB(215, 175, 30)
+local PANEL   = Color3.fromRGB(27, 31, 38)
+local PANEL_2 = Color3.fromRGB(38, 43, 52)
+local BAD     = Color3.fromRGB(168, 54, 54)
+
+-- Backpacks have no Visual table to draw a tier color from (pickaxes do -- see below),
+-- so this ramp stands in for one: grey -> bronze -> silver -> gold as Tier climbs.
+local BACKPACK_TIER_COLOR = {
+	[1] = Color3.fromRGB(140, 140, 148),
+	[2] = Color3.fromRGB(176, 124, 62),
+	[3] = Color3.fromRGB(196, 199, 204),
+	[4] = Color3.fromRGB(215, 175, 30),
+}
+
+local function getTierColor(itemType, item)
+	if itemType == "pickaxe" then
+		-- Reuse the pickaxe's own HeadColor so the card border always matches the
+		-- tool you'd actually be holding -- no separate ramp to keep in sync.
+		return (item.Visual and item.Visual.HeadColor) or Color3.fromRGB(160, 160, 170)
+	end
+	return BACKPACK_TIER_COLOR[item.Tier] or Color3.fromRGB(160, 160, 170)
+end
+
 -- ── Build ScreenGui ───────────────────────────────────────────────────────────
 
 local shopScreen              = Instance.new("ScreenGui")
@@ -65,36 +90,35 @@ local dialog                  = Instance.new("Frame")
 dialog.Name                   = "Dialog"
 dialog.Size                   = UDim2.new(0, 680, 0, 440)
 dialog.Position               = UDim2.new(0.5, -340, 0.5, -220)
-dialog.BackgroundColor3       = Color3.fromRGB(25, 25, 30)
+dialog.BackgroundColor3       = PANEL
 dialog.BorderSizePixel        = 0
 dialog.ZIndex                 = 51
 dialog.Parent                 = shopScreen
 addCorner(dialog, 10)
 
--- Title bar (gold)
+-- Title bar -- hairline gold accent instead of a solid block. The dialog's own
+-- background shows through the header, so no corner-masking hack is needed.
 local titleBar                = Instance.new("Frame")
 titleBar.Name                 = "TitleBar"
 titleBar.Size                 = UDim2.new(1, 0, 0, 48)
-titleBar.BackgroundColor3     = Color3.fromRGB(180, 130, 15)
-titleBar.BorderSizePixel      = 0
+titleBar.BackgroundTransparency = 1
 titleBar.ZIndex               = 52
 titleBar.Parent               = dialog
-addCorner(titleBar, 10)
 
--- Mask bottom two corners so only top is rounded
-local titleMask               = Instance.new("Frame")
-titleMask.Size                = UDim2.new(1, 0, 0.5, 0)
-titleMask.Position            = UDim2.new(0, 0, 0.5, 0)
-titleMask.BackgroundColor3    = Color3.fromRGB(180, 130, 15)
-titleMask.BorderSizePixel     = 0
-titleMask.ZIndex              = 52
-titleMask.Parent              = titleBar
+local titleAccent             = Instance.new("Frame")
+titleAccent.Name              = "TitleAccent"
+titleAccent.Size              = UDim2.new(1, -32, 0, 2)
+titleAccent.Position          = UDim2.new(0, 16, 0, 46)
+titleAccent.BackgroundColor3  = GOLD
+titleAccent.BorderSizePixel   = 0
+titleAccent.ZIndex            = 52
+titleAccent.Parent            = dialog
 
 local titleLabel              = Instance.new("TextLabel")
 titleLabel.Size               = UDim2.new(1, -56, 1, 0)
 titleLabel.Position           = UDim2.new(0, 16, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.TextColor3         = Color3.fromRGB(255, 255, 255)
+titleLabel.TextColor3         = GOLD
 titleLabel.Font               = Enum.Font.GothamBold
 titleLabel.TextSize           = 17
 titleLabel.Text               = "FRONTIER MINING SUPPLIES"
@@ -106,14 +130,20 @@ local closeBtn                = Instance.new("TextButton")
 closeBtn.Name                 = "CloseBtn"
 closeBtn.Size                 = UDim2.new(0, 34, 0, 34)
 closeBtn.Position             = UDim2.new(1, -42, 0.5, -17)
-closeBtn.BackgroundColor3     = Color3.fromRGB(200, 60, 60)
+closeBtn.BackgroundColor3     = PANEL_2
 closeBtn.Text                 = "✕"
-closeBtn.TextColor3           = Color3.fromRGB(255, 255, 255)
+closeBtn.TextColor3           = Color3.fromRGB(214, 130, 130)
 closeBtn.Font                 = Enum.Font.GothamBold
 closeBtn.TextSize             = 15
 closeBtn.ZIndex               = 54
 closeBtn.Parent               = titleBar
 addCorner(closeBtn, 6)
+
+local closeBtnStroke          = Instance.new("UIStroke")
+closeBtnStroke.Color          = BAD
+closeBtnStroke.Thickness      = 1.25
+closeBtnStroke.Transparency   = 0.2
+closeBtnStroke.Parent         = closeBtn
 
 -- Upgrade confirmation sound (short positive chime)
 local upgradeSound            = Instance.new("Sound")
@@ -221,10 +251,85 @@ local function makeItemCard(parent, itemType, item, order)
 	card.Parent                   = parent
 	addCorner(card, 7)
 
-	-- Item name (top-left)
+	local tierColor               = getTierColor(itemType, item)
+
+	-- Left-edge tier border -- bronze/steel/titanium-equivalent read at a glance
+	local tierEdge                = Instance.new("Frame")
+	tierEdge.Name                  = "TierEdge"
+	tierEdge.Size                  = UDim2.new(0, 4, 1, 0)
+	tierEdge.BackgroundColor3      = tierColor
+	tierEdge.BorderSizePixel       = 0
+	tierEdge.ZIndex                = 54
+	tierEdge.Parent                = card
+	addCorner(tierEdge, 3)
+
+	-- Item icon -- procedural silhouette (pickaxe cross / backpack body+flap) in the
+	-- tier color, same technique as the hard hat's welded parts, just 2D this time
+	local icon                    = Instance.new("Frame")
+	icon.Name                     = "Icon"
+	icon.Size                     = UDim2.new(0, 32, 0, 32)
+	icon.Position                 = UDim2.new(0, 10, 0, (ITEM_H - 32) / 2)
+	icon.BackgroundColor3         = tierColor
+	icon.BackgroundTransparency   = 0.82
+	icon.BorderSizePixel          = 0
+	icon.ZIndex                   = 54
+	icon.Parent                   = card
+	addCorner(icon, 7)
+
+	local iconStroke               = Instance.new("UIStroke")
+	iconStroke.Color               = tierColor
+	iconStroke.Thickness           = 1
+	iconStroke.Transparency        = 0.35
+	iconStroke.Parent              = icon
+
+	if itemType == "pickaxe" then
+		local handle               = Instance.new("Frame")
+		handle.Size                = UDim2.new(0, 4, 0, 22)
+		handle.AnchorPoint         = Vector2.new(0.5, 0.5)
+		handle.Position            = UDim2.new(0.5, 2, 0.5, 3)
+		handle.Rotation            = 45
+		handle.BackgroundColor3    = tierColor
+		handle.BorderSizePixel     = 0
+		handle.ZIndex              = 55
+		handle.Parent              = icon
+		addCorner(handle, 2)
+
+		local head                 = Instance.new("Frame")
+		head.Size                  = UDim2.new(0, 4, 0, 13)
+		head.AnchorPoint           = Vector2.new(0.5, 0.5)
+		head.Position              = UDim2.new(0.5, -4, 0.5, -6)
+		head.Rotation              = -45
+		head.BackgroundColor3      = tierColor
+		head.BorderSizePixel       = 0
+		head.ZIndex                = 55
+		head.Parent                = icon
+		addCorner(head, 2)
+	else
+		local body                 = Instance.new("Frame")
+		body.Size                  = UDim2.new(0, 16, 0, 14)
+		body.AnchorPoint           = Vector2.new(0.5, 0.5)
+		body.Position              = UDim2.new(0.5, 0, 0.5, 5)
+		body.BackgroundColor3      = tierColor
+		body.BorderSizePixel       = 0
+		body.ZIndex                = 55
+		body.Parent                = icon
+		addCorner(body, 4)
+
+		local flap                 = Instance.new("Frame")
+		flap.Size                  = UDim2.new(0, 10, 0, 8)
+		flap.AnchorPoint           = Vector2.new(0.5, 0.5)
+		flap.Position              = UDim2.new(0.5, 0, 0.5, -8)
+		flap.BackgroundColor3      = tierColor
+		flap.BorderSizePixel       = 0
+		flap.ZIndex                = 55
+		flap.Parent                = icon
+		addCorner(flap, 3)
+	end
+
+	-- Item name (top-left, shifted right to clear the icon)
 	local nameLabel               = Instance.new("TextLabel")
-	nameLabel.Size                = UDim2.new(1, -104, 0, 22)
-	nameLabel.Position            = UDim2.new(0, 12, 0, 10)
+	nameLabel.Size                = UDim2.new(1, -142, 0, 22)
+	nameLabel.Position            = UDim2.new(0, 50, 0, 10)
 	nameLabel.BackgroundTransparency = 1
 	nameLabel.TextColor3          = Color3.fromRGB(240, 240, 240)
 	nameLabel.Font                = Enum.Font.GothamBold
@@ -234,10 +339,10 @@ local function makeItemCard(parent, itemType, item, order)
 	nameLabel.ZIndex              = 54
 	nameLabel.Parent              = card
 
-	-- Stat (bottom-left)
+	-- Stat (bottom-left, shifted right to clear the icon)
 	local statLabel               = Instance.new("TextLabel")
-	statLabel.Size                = UDim2.new(1, -104, 0, 18)
-	statLabel.Position            = UDim2.new(0, 12, 0, 36)
+	statLabel.Size                = UDim2.new(1, -142, 0, 18)
+	statLabel.Position            = UDim2.new(0, 50, 0, 36)
 	statLabel.BackgroundTransparency = 1
 	statLabel.Font                = Enum.Font.Gotham
 	statLabel.TextSize            = 12
