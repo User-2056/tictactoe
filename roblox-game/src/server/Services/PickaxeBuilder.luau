@@ -6,11 +6,33 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EquipmentConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("EquipmentConfig"))
+local CustomPickaxes = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("CustomPickaxes")
 
 local pickaxeById = {}
 for _, p in ipairs(EquipmentConfig.Pickaxes) do pickaxeById[p.Id] = p end
 
 local PickaxeBuilder = {}
+
+-- Clones a hand-modeled Handle+Head pair (see EquipmentConfig's Custom Visual fields)
+-- instead of building parts procedurally. The model's own Handle/Head Weld is preserved
+-- by the clone; only the Tool-level grip basis is set here, since that's specific to how
+-- this particular mesh's local axes are laid out (see EquipmentConfig comment).
+local function buildCustom(tool, visual)
+	local template = CustomPickaxes:FindFirstChild(visual.CustomModel)
+	if not template then
+		warn("[PickaxeBuilder] Missing custom model: " .. tostring(visual.CustomModel))
+		return
+	end
+
+	for _, child in ipairs(template:GetChildren()) do
+		child:Clone().Parent = tool
+	end
+
+	tool.GripForward = visual.GripForward
+	tool.GripRight   = visual.GripRight
+	tool.GripUp      = visual.GripUp
+	tool.GripPos     = visual.GripPos
+end
 
 function PickaxeBuilder.build(pickaxeId)
 	local config = pickaxeById[pickaxeId]
@@ -29,6 +51,11 @@ function PickaxeBuilder.build(pickaxeId)
 	-- Position the grip so the player holds the lower third of the shaft
 	tool.GripPos         = Vector3.new(0, 0, -0.4)
 	tool:SetAttribute("PickaxeId", pickaxeId)
+
+	if visual.Custom then
+		buildCustom(tool, visual)
+		return tool
+	end
 
 	-- Shaft (the handle the player grips)
 	local handle          = Instance.new("Part")

@@ -21,13 +21,18 @@ return {
 			Rarity = "Common", SwingSpeed = 1.6,
 			Description = "A basic pickaxe issued to every new miner. Gets the job done.",
 			Visual = {
-				HandleSize     = Vector3.new(0.35, 0.35, 1.6),
-				HandleColor    = Color3.fromRGB(94, 68, 42),    -- worn dark brown
-				HandleMaterial = Enum.Material.Wood,
-				HeadSize       = Vector3.new(1.3, 0.6, 0.6),
-				HeadColor      = Color3.fromRGB(120, 100, 80),  -- warm dull tan-grey stone -- distinct from Iron's cool bright silver
-				HeadMaterial   = Enum.Material.Slate,
-				Bands          = {},
+				-- Hand-modeled mesh (wood Handle + Slate Head) instead of procedural boxes --
+				-- PickaxeBuilder clones ReplicatedStorage.Assets.CustomPickaxes.StarterPickaxeModel
+				-- for any tier with Custom = true rather than building parts from Size/Color fields.
+				-- Grip vectors were derived empirically in Play mode: this model's long "handle" axis
+				-- is local Y, not Z like the procedural tiers, so it needs its own Grip basis instead
+				-- of the shared GripPos-only default.
+				Custom      = true,
+				CustomModel = "StarterPickaxeModel",
+				GripForward = Vector3.new(0, -1, 0),
+				GripRight   = Vector3.new(1, 0, 0),
+				GripUp      = Vector3.new(0, 0, -1),
+				GripPos     = Vector3.new(0, -0.4, 0),
 			},
 		},
 		{
