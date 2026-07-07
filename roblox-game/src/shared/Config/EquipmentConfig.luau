@@ -35,7 +35,12 @@ return {
 				GripForward = Vector3.new(0, 1, 0),
 				GripRight   = Vector3.new(1, 0, 0),
 				GripUp      = Vector3.new(0, 0, 1),
-				GripPos     = Vector3.new(0, 0.4, 0),
+				-- 0.6, not 0.4 -- at 0.4 the handle's back end sank into RightLowerArm
+				-- (measured via distance-to-arm-center, not just by eye: 0.52 studs of
+				-- clearance at 0.4 vs the arm's own ~0.5 stud half-width, i.e. right at the
+				-- surface). 0.6 pushes clearance to ~0.72 studs and also reads as "held
+				-- further out", which is what was actually being reported as "stuck in my arm".
+				GripPos     = Vector3.new(0, 0.6, 0),
 			},
 		},
 		{
