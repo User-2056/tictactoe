@@ -17,6 +17,13 @@ local PickaxeBuilder = {}
 -- instead of building parts procedurally. The model's own Handle/Head Weld is preserved
 -- by the clone; only the Tool-level grip basis is set here, since that's specific to how
 -- this particular mesh's local axes are laid out (see EquipmentConfig comment).
+--
+-- Grip is built as a SINGLE CFrame, not via the four legacy GripForward/Right/Up/Pos
+-- properties -- setting those individually was confirmed by testing to silently
+-- re-derive/reorder each other (each assignment recomputes off whatever the OTHER
+-- three currently hold), so the final basis didn't match what was assigned and the
+-- tool held sideways with the head clipped into the body. CFrame.fromMatrix's third
+-- arg is the "back" axis, i.e. -GripForward (Roblox's LookVector = -Z convention).
 local function buildCustom(tool, visual)
 	local template = CustomPickaxes:FindFirstChild(visual.CustomModel)
 	if not template then
@@ -28,10 +35,8 @@ local function buildCustom(tool, visual)
 		child:Clone().Parent = tool
 	end
 
-	tool.GripForward = visual.GripForward
-	tool.GripRight   = visual.GripRight
-	tool.GripUp      = visual.GripUp
-	tool.GripPos     = visual.GripPos
+	tool.Grip = CFrame.new(visual.GripPos)
+		* CFrame.fromMatrix(Vector3.new(0, 0, 0), visual.GripRight, visual.GripUp, -visual.GripForward)
 end
 
 function PickaxeBuilder.build(pickaxeId)
