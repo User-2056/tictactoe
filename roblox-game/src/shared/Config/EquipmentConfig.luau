@@ -24,15 +24,18 @@ return {
 				-- Hand-modeled mesh (wood Handle + Slate Head) instead of procedural boxes --
 				-- PickaxeBuilder clones ReplicatedStorage.Assets.CustomPickaxes.StarterPickaxeModel
 				-- for any tier with Custom = true rather than building parts from Size/Color fields.
-				-- Grip vectors were derived empirically in Play mode: this model's long "handle" axis
-				-- is local Y, not Z like the procedural tiers, so it needs its own Grip basis instead
-				-- of the shared GripPos-only default.
+				-- Grip vectors were derived empirically in Play mode (verified with
+				-- Vector3:Dot() against HumanoidRootPart.CFrame.LookVector, not just by eye --
+				-- an earlier attempt LOOKED right in a screenshot but was actually backwards,
+				-- holding the tool by the head with the handle sticking out): this model's long
+				-- "handle" axis is local Y, not Z like the procedural tiers, and the Head sits
+				-- on the +Y side of Handle, so GripForward must be +Y for the head to lead.
 				Custom      = true,
 				CustomModel = "StarterPickaxeModel",
-				GripForward = Vector3.new(0, -1, 0),
+				GripForward = Vector3.new(0, 1, 0),
 				GripRight   = Vector3.new(1, 0, 0),
-				GripUp      = Vector3.new(0, 0, -1),
-				GripPos     = Vector3.new(0, -0.4, 0),
+				GripUp      = Vector3.new(0, 0, 1),
+				GripPos     = Vector3.new(0, 0.4, 0),
 			},
 		},
 		{
