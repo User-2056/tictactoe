@@ -35,12 +35,16 @@ return {
 				GripForward = Vector3.new(0, 1, 0),
 				GripRight   = Vector3.new(1, 0, 0),
 				GripUp      = Vector3.new(0, 0, 1),
-				-- 0.6, not 0.4 -- at 0.4 the handle's back end sank into RightLowerArm
-				-- (measured via distance-to-arm-center, not just by eye: 0.52 studs of
-				-- clearance at 0.4 vs the arm's own ~0.5 stud half-width, i.e. right at the
-				-- surface). 0.6 pushes clearance to ~0.72 studs and also reads as "held
-				-- further out", which is what was actually being reported as "stuck in my arm".
-				GripPos     = Vector3.new(0, 0.6, 0),
+				-- GripPos.Y alone (sliding along the handle's own length) was a dead end --
+				-- measured via workspace:GetPartsInPart / closest-distance-to-RightUpperArm
+				-- that it stayed embedded (~-0.62 studs) no matter how far that single axis
+				-- was pushed (even the KNOWN-GOOD Iron/Steel tiers overlap RightHand/
+				-- RightLowerArm; that's normal, the fist is supposed to wrap the grip -- but
+				-- they clear RightUpperArm by +0.34, which ours didn't at any GripPos.Y).
+				-- The fix needed a SIDEWAYS offset (local Z, i.e. GripUp) to actually move the
+				-- handle off the arm's centerline: (0, 0.9, 1.0) clears RightUpperArm by +0.38,
+				-- RightLowerArm/RightHand by +0.29, matching or beating the Iron reference.
+				GripPos     = Vector3.new(0, 0.9, 1.0),
 			},
 		},
 		{
