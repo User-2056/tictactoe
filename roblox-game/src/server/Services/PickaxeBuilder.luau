@@ -31,9 +31,17 @@ local function buildCustom(tool, visual)
 		return
 	end
 
-	for _, child in ipairs(template:GetChildren()) do
-		child:Clone().Parent = tool
+	-- Clone the WHOLE model in a single Clone() call, not each child separately --
+	-- confirmed by testing that Weld.Part0/Part1 only get remapped to the new clones
+	-- when both welded parts are cloned together in the same call. Cloning Handle and
+	-- Head independently left the cloned Handle's Weld pointing at the ORIGINAL
+	-- template's Head (still sitting in ReplicatedStorage), so the head never actually
+	-- followed the handle -- it looked like the head was simply missing.
+	local clone = template:Clone()
+	for _, child in ipairs(clone:GetChildren()) do
+		child.Parent = tool
 	end
+	clone:Destroy()
 
 	tool.Grip = CFrame.new(visual.GripPos)
 		* CFrame.fromMatrix(Vector3.new(0, 0, 0), visual.GripRight, visual.GripUp, -visual.GripForward)
