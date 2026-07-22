@@ -1,7 +1,40 @@
 # CLAUDE.md
 
 Guidance for Claude Code when working in this repository.
-Auto-updated at end of every session. Last updated: 2026-07-01 (starter outfit).
+Auto-updated at end of every session. Last updated: 2026-07-22 (custom pickaxe grip bug, repo relocation).
+
+**Repo location:** moved from `C:\Users\Taylor\OneDrive\Desktop\ClaudeCodeTest` to
+`C:\Users\Taylor\Downloads\ClaudeCodeTest` (as of 2026-07-22). Git history intact; remote unchanged.
+
+**Conversation logging:** a Stop hook (`.claude/hooks/log-conversation.js`, registered in
+`.claude/settings.json`) appends every session's turns to `CONVERSATION_LOG.md` at the repo root
+and auto-commits+pushes after every response. Check that file (or `git log`) for full history of
+what's been discussed/done in past sessions — don't assume anything not written here in CLAUDE.md
+is lost, it's likely in there.
+
+---
+
+## ⚠️ Open Issue: Custom pickaxe grip broken (as of 2026-07-22)
+
+User created and imported a **new** custom pickaxe mesh into Studio today (replacing whatever was
+previously in `ReplicatedStorage.Assets.CustomPickaxes.StarterPickaxeModel`). When equipped, it
+hovers below/away from the hand instead of being held (see user's screenshot
+`OneDrive\Pictures\Screenshots\pickaxe under.png`, taken 2026-07-22 12:45).
+
+**Root cause:** `EquipmentConfig.luau`'s `starter_pickaxe.Visual` block (`GripForward`, `GripRight`,
+`GripUp`, `GripPos`) was empirically hand-tuned on 2026-07-08 for the *previous* mesh's specific
+local-axis layout (see the extensive comments there and in `PickaxeBuilder.luau` documenting that
+saga). A new mesh almost certainly has different local axes/pivot, so those numbers are very
+likely wrong for it now — don't assume they still apply.
+
+**Do NOT guess new Grip values blind** — the existing comments already document one past instance
+of a fix that "looked right in a screenshot but was actually backwards." Instead:
+1. The `Roblox_Studio` MCP server (tools: `inspect_instance`, `search_game_tree`,
+   `character_navigation`) was just re-registered for this repo's new location and should be
+   available in fresh sessions here — use `inspect_instance` on the new
+   `CustomPickaxes.StarterPickaxeModel` to get its actual part sizes/CFrames before computing grip.
+2. Verify empirically in Play mode the same way the 2026-07-08 fix did (Vector3:Dot() against
+   HumanoidRootPart.CFrame.LookVector, or equivalent), not just by eye.
 
 ---
 
