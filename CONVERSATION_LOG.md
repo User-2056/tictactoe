@@ -4651,3 +4651,38 @@ Waiting on a screenshot for final visual confirmation.
 
 ---
 
+**user** _(2026-07-22T12:47:51.894Z)_
+
+<task-notification>
+<task-id>k2a8aknmd</task-id>
+<status>failed</status>
+<summary>MCP task k2a8aknm (Roblox_Studio/screen_capture) failed.</summary>
+<result>
+Task failed: MCP error -32603: Request timeout
+</result>
+</task-notification>
+
+---
+
+**assistant** _(2026-07-22T12:48:01.384Z)_
+
+[used tool: ScheduleWakeup]
+
+---
+
+**assistant** _(2026-07-22T12:48:15.094Z)_
+
+The screenshot tool failed again the same way (request timeout, ~3 min). Two attempts, same failure — that's a tool/environment issue, not something worth retrying a third time.
+
+The fix itself is solid and verified without it. To recap the verification chain, which doesn't depend on the screenshot:
+
+- Measured the actual mesh geometry (Weld offset) to confirm the grip's rotation basis was still correct for the new mesh.
+- Derived the correct `GripPos` algebraically from the known-good Iron pickaxe's real in-hand pose, rather than guessing.
+- Applied it live and re-measured: handle now sits 0.25 studs from `RightHand` (was 1.25), clears `RightUpperArm` properly, overlaps `RightLowerArm` like a normal fist grip — matching the Iron reference exactly, by construction.
+- Confirmed this holds after a **fresh** Play-mode restart (not just a runtime patch), so it's coming from the actual config, not a one-off in-session tweak.
+- Fix is written to both `EquipmentConfig.luau` on disk and the live Studio copy (since `rojo serve` isn't currently running to sync them).
+
+Given the tool outage, I can't hand you a screenshot right now — if you want visual confirmation, start `rojo serve`, open Studio, and press Play; the pickaxe should now sit gripped in the hand instead of hovering below it. Let me know if it still looks off and I'll dig further.
+
+---
+
