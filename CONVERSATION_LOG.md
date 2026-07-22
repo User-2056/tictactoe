@@ -4335,3 +4335,192 @@ JSON is valid. Now let's pipe-test the exact command string with `CLAUDE_PROJECT
 
 ---
 
+**user** _(2026-07-22T12:29:46.122Z)_
+
+fix the problem i mentioned before
+
+---
+
+**assistant** _(2026-07-22T12:29:50.974Z)_
+
+I'll start by loading the Roblox Studio MCP tools I need, then inspect the current state of the pickaxe mesh and the grip code.
+
+---
+
+**assistant** _(2026-07-22T12:29:51.961Z)_
+
+[used tool: ToolSearch]
+
+---
+
+**assistant** _(2026-07-22T12:29:52.315Z)_
+
+[used tool: Glob]
+
+---
+
+**assistant** _(2026-07-22T12:29:53.236Z)_
+
+[used tool: Glob]
+
+---
+
+**assistant** _(2026-07-22T12:29:56.105Z)_
+
+[used tool: Read]
+
+---
+
+**assistant** _(2026-07-22T12:29:56.738Z)_
+
+[used tool: Read]
+
+---
+
+**assistant** _(2026-07-22T12:29:56.759Z)_
+
+[used tool: mcp__Roblox_Studio__get_studio_state]
+
+---
+
+**assistant** _(2026-07-22T12:29:59.796Z)_
+
+[used tool: mcp__Roblox_Studio__inspect_instance]
+
+---
+
+**assistant** _(2026-07-22T12:30:04.689Z)_
+
+[used tool: mcp__Roblox_Studio__inspect_instance]
+
+---
+
+**assistant** _(2026-07-22T12:30:05.287Z)_
+
+[used tool: mcp__Roblox_Studio__inspect_instance]
+
+---
+
+**assistant** _(2026-07-22T12:30:55.617Z)_
+
+[used tool: mcp__Roblox_Studio__inspect_instance]
+
+---
+
+**assistant** _(2026-07-22T12:31:18.748Z)_
+
+[used tool: ToolSearch]
+
+---
+
+**assistant** _(2026-07-22T12:31:36.143Z)_
+
+[used tool: mcp__Roblox_Studio__start_stop_play]
+
+---
+
+**assistant** _(2026-07-22T12:31:49.097Z)_
+
+[used tool: mcp__Roblox_Studio__execute_luau]
+
+---
+
+**assistant** _(2026-07-22T12:35:48.954Z)_
+
+This confirms the bug: the custom pickaxe's Handle sits ~1 stud below and behind the hand — not gripped at all. Rather than guess new numbers by eye, I'll derive the correct grip mathematically: measure the known-good Iron pickaxe's hand-relative pose, then solve for the Grip transform that puts the custom mesh in that same pose, accounting for its different local axes.
+
+---
+
+**assistant** _(2026-07-22T12:35:59.046Z)_
+
+[used tool: mcp__Roblox_Studio__execute_luau]
+
+---
+
+**assistant** _(2026-07-22T12:36:02.009Z)_
+
+[used tool: mcp__Roblox_Studio__get_studio_state]
+
+---
+
+**assistant** _(2026-07-22T12:36:05.075Z)_
+
+Play mode ended unexpectedly. Restarting it.
+
+---
+
+**assistant** _(2026-07-22T12:36:05.164Z)_
+
+[used tool: mcp__Roblox_Studio__start_stop_play]
+
+---
+
+**assistant** _(2026-07-22T12:36:09.627Z)_
+
+[used tool: mcp__Roblox_Studio__get_studio_state]
+
+---
+
+**assistant** _(2026-07-22T12:36:11.856Z)_
+
+Good, now in Play mode with Server datamodel available. Re-running the diagnostic/solve script.
+
+---
+
+**assistant** _(2026-07-22T12:36:21.843Z)_
+
+[used tool: mcp__Roblox_Studio__execute_luau]
+
+---
+
+**assistant** _(2026-07-22T12:36:35.538Z)_
+
+The solve converged on clean values — and notably the rotation (`GripForward`/`GripRight`/`GripUp`) came out identical to what was already configured, confirming that part was correct. Only `GripPos` was wrong: `(0, 0.9, 1.0)` → `(0, 0.4, 0)`. Let me visually confirm before writing it back.
+
+---
+
+**assistant** _(2026-07-22T12:36:36.087Z)_
+
+[used tool: ToolSearch]
+
+---
+
+**assistant** _(2026-07-22T12:36:40.675Z)_
+
+[used tool: mcp__Roblox_Studio__execute_luau]
+
+---
+
+**assistant** _(2026-07-22T12:36:43.645Z)_
+
+[used tool: mcp__Roblox_Studio__screen_capture]
+
+---
+
+**assistant** _(2026-07-22T12:38:51.837Z)_
+
+[used tool: ScheduleWakeup]
+
+---
+
+**user** _(2026-07-22T12:38:59.836Z)_
+
+[Your previous response had no visible output. Please continue and produce a user-visible response.]
+
+---
+
+**assistant** _(2026-07-22T12:39:09.855Z)_
+
+Still waiting on the screenshot capture (it moved to background after running long) to visually confirm the grip fix. In the meantime, here's what I've found and done:
+
+**Root cause confirmed:** the new pickaxe mesh's `GripForward`/`GripRight`/`GripUp` axis assignment in `EquipmentConfig.luau` was actually still correct (verified via the mesh's Weld — the head sits at +Y from the handle, matching `GripForward = (0,1,0)`). The bug was purely `GripPos = (0, 0.9, 1.0)`, which was tuned for the old mesh's proportions and pushed the new handle ~1 stud below and behind the hand.
+
+**Fix derived, not guessed:** I equipped the known-good Iron pickaxe in Play mode, measured its Handle CFrame relative to `RightHand`, then solved algebraically for the Grip CFrame that puts the new mesh's handle in that exact same hand-relative pose (accounting for the new mesh's local Y being the forward axis instead of Iron's local -Z). Applied live and re-measured:
+- New `GripPos = (0, 0.4, 0)` (down from `(0, 0.9, 1.0)`)
+- Distance from handle to hand dropped from ~1.25 studs to 0.25 studs
+- Clears `RightUpperArm` by 1.04 studs, overlaps `RightLowerArm` by 0.38 (fist wrapping the grip, same as the Iron reference)
+
+Waiting on the screenshot to eyeball it before I write this to `EquipmentConfig.luau`.
+
+---
+
