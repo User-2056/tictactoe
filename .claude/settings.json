@@ -7,5 +7,19 @@
       "PowerShell(Get-ChildItem *)",
       "PowerShell(Get-Content *)"
     ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/log-conversation.js\"",
+            "timeout": 30,
+            "statusMessage": "Logging conversation to CONVERSATION_LOG.md and pushing..."
+          }
+        ]
+      }
+    ]
   }
 }
