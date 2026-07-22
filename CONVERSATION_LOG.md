@@ -4524,3 +4524,130 @@ Waiting on the screenshot to eyeball it before I write this to `EquipmentConfig.
 
 ---
 
+**user** _(2026-07-22T12:40:00.146Z)_
+
+Check on the pickaxe grip screenshot task and finish applying the fix to EquipmentConfig.luau if not already done.
+
+---
+
+**assistant** _(2026-07-22T12:40:03.340Z)_
+
+[used tool: ToolSearch]
+
+---
+
+**assistant** _(2026-07-22T12:40:05.453Z)_
+
+[used tool: TaskOutput]
+
+---
+
+**assistant** _(2026-07-22T12:40:10.045Z)_
+
+The screenshot task is still running in the background. Rather than block on it — the geometric verification (matching Iron's exact hand-relative pose) is already the rigorous check the project's own notes call for — I'll apply the fix to `EquipmentConfig.luau` now.
+
+---
+
+**assistant** _(2026-07-22T12:40:25.306Z)_
+
+[used tool: Edit]
+
+---
+
+**assistant** _(2026-07-22T12:40:37.887Z)_
+
+[used tool: TaskOutput]
+
+---
+
+**assistant** _(2026-07-22T12:41:45.552Z)_
+
+[used tool: TaskOutput]
+
+---
+
+**assistant** _(2026-07-22T12:41:45.598Z)_
+
+[used tool: mcp__Roblox_Studio__script_read]
+
+---
+
+**assistant** _(2026-07-22T12:41:59.377Z)_
+
+The live Studio copy of `EquipmentConfig` still has the old values — Rojo hasn't synced my disk edit in yet. I'll push the fix directly into Studio to make sure it's actually live, and check whether `rojo serve` is running for future syncs.
+
+---
+
+**assistant** _(2026-07-22T12:42:00.171Z)_
+
+[used tool: Bash]
+
+---
+
+**assistant** _(2026-07-22T12:42:00.320Z)_
+
+[used tool: mcp__Roblox_Studio__start_stop_play]
+
+---
+
+**assistant** _(2026-07-22T12:42:25.631Z)_
+
+[used tool: mcp__Roblox_Studio__multi_edit]
+
+---
+
+**assistant** _(2026-07-22T12:42:36.971Z)_
+
+Now let's start Play mode fresh and take a real screenshot to visually confirm before calling this done.
+
+---
+
+**assistant** _(2026-07-22T12:42:37.000Z)_
+
+[used tool: mcp__Roblox_Studio__start_stop_play]
+
+---
+
+**assistant** _(2026-07-22T12:42:46.119Z)_
+
+[used tool: mcp__Roblox_Studio__execute_luau]
+
+---
+
+**assistant** _(2026-07-22T12:42:51.026Z)_
+
+The live game now reflects the fix from a fresh Play start (loaded straight from the edited config, confirming the Studio edit persisted correctly). Same good numbers as the solved values. Now for the visual check.
+
+---
+
+**assistant** _(2026-07-22T12:42:51.852Z)_
+
+[used tool: mcp__Roblox_Studio__screen_capture]
+
+---
+
+**assistant** _(2026-07-22T12:44:56.193Z)_
+
+The screenshot tool is being slow again (last attempt timed out after ~3 minutes). It's running in the background now — I'll wait for it rather than block.
+
+---
+
+**assistant** _(2026-07-22T12:44:58.024Z)_
+
+[used tool: ScheduleWakeup]
+
+---
+
+**assistant** _(2026-07-22T12:45:10.305Z)_
+
+**Fix applied.** Summary while I wait on the screenshot:
+
+- **Root cause:** the new pickaxe mesh (imported today, new MeshIds, part renamed `Head`→`PickHead`) kept the same local-axis layout as the old one — confirmed by inspecting the mesh's own Weld, which still offsets the head +0.51 studs along local Y — so `GripForward`/`GripRight`/`GripUp` were still correct. `GripPos = (0, 0.9, 1.0)` was not; it was tuned for the old mesh's proportions and left the new handle hovering ~1 stud below/behind the hand.
+- **Fix:** derived `GripPos = (0, 0.4, 0)` algebraically — equipped the known-good Iron pickaxe in Play mode, measured its Handle pose relative to `RightHand`, and solved for the Grip that puts the new mesh in that identical hand-relative pose. Verified live: handle-to-hand distance went from 1.25 studs to 0.25, clears `RightUpperArm` by 1.04 studs, overlaps `RightLowerArm` by 0.38 (correct fist-wrap, matching Iron's reference numbers).
+- **Applied both places:** `roblox-game/src/shared/Config/EquipmentConfig.luau` on disk, and directly patched the live Studio copy of `ReplicatedStorage.Config.EquipmentConfig` too — `rojo serve` is **not currently running**, so Studio wasn't picking up disk edits. Worth starting `rojo serve` before your next session so edits sync automatically again.
+- Re-ran in a fresh Play session (not just live-patched) and got identical good numbers, confirming the config change itself is what's producing the fix, not just the runtime patch.
+
+Waiting on a screenshot for final visual confirmation.
+
+---
+
